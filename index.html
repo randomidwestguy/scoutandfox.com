@@ -1,0 +1,2067 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Adventures of Scout & Fox</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a14;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+canvas{image-rendering:pixelated;border:1px solid rgba(139,92,246,.35);box-shadow:0 0 60px rgba(139,92,246,.18),0 0 120px rgba(0,0,0,.8)}
+#hint{color:rgba(255,255,255,.22);font-size:11px;margin-top:10px;letter-spacing:.05em;text-align:center;font-family:'Segoe UI',system-ui,sans-serif}
+</style>
+</head>
+<body>
+<canvas id="c" width="800" height="528"></canvas>
+<div id="hint"></div>
+<script>
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+const VW=800,VH=528,TS=32,MW=60,MH=44;
+
+const GRASS=0,PATH=1,TREE=2,WATER=3,SAND=4,FLOWER=5,
+      TALL=6,COBBLE=7,ROCK=8,HOUSE=9;
+const SOLID_SET=new Set([TREE,WATER,ROCK,HOUSE]);
+
+const C={
+  g1:'#5ed62e',g2:'#4ec424',g3:'#389818',
+  path:'#e0b454',pathD:'#c09438',
+  treeC:'#186010',treeCL:'#28901c',treeTr:'#4a2808',
+  water:'#18a0e8',waterL:'rgba(80,210,255,0.55)',
+  sand:'#f0d078',sandD:'#d4b050',
+  fl1:'#ff3366',fl2:'#ffcc00',fl3:'#ff66cc',
+  tall:'#3cc030',tallD:'#1e8010',
+  cob:'#a8a490',cobD:'#6a6454',cobJ:'rgba(20,18,10,0.45)',
+  rock:'#8a8878',rockD:'#545248',
+  hW:'#f0d0a0',hWd:'#d4a870',hR:'#c03820',hRl:'#e04828',
+  scTop:'#22c488',scBot:'#1a6aaa',scHair:'#4A2008',skin:'#F4C898',
+  fxTop:'#f06020',fxBot:'#8a3c10',fxHair:'#f0d020',
+  brC:'#60a020',brD:'#386008',brE:'#d8f030',
+  goC:'#9a9060',goD:'#504830',goE:'#f07020',
+  wiC:'#8020c0',wiL:'#d060f0',wiG:'#f0c0ff',
+  spC:'#8a6038',spD:'#503010',
+  elC:'#2050b0',elH:'#90a0e0',
+  brNpc:'#a06028',brH:'#f0d060',
+  moC:'#782890',moH:'#f0c8a8',
+  dlgBg:'rgba(10,6,20,.95)',dlgBr:'#8b5cf6',
+  hp:'#f02020',hpE:'#401010',
+  gold:'#FFD060',white:'#F8F0E0',lore:'#C090FF',
+};
+
+// ── World ──────────────────────────────────────────────
+const world=Array.from({length:MH},()=>new Uint8Array(MW).fill(GRASS));
+function setT(x,y,t){if(x>=0&&x<MW&&y>=0&&y<MH)world[y][x]=t;}
+function getT(x,y){return(x>=0&&x<MW&&y>=0&&y<MH)?world[y][x]:TREE;}
+function isSolid(x,y){return SOLID_SET.has(getT(x,y));}
+function fillR(x,y,w,h,t){for(let dy=0;dy<h;dy++)for(let dx=0;dx<w;dx++)setT(x+dx,y+dy,t);}
+function hln(x,y,l,t){fillR(x,y,l,1,t);}
+function vln(x,y,l,t){fillR(x,y,1,l,t);}
+
+(function buildWorld(){
+  hln(0,0,MW,TREE);hln(0,MH-1,MW,TREE);
+  vln(0,0,MH,TREE);vln(MW-1,0,MH,TREE);
+  fillR(1,1,MW-2,7,TREE);
+  fillR(23,1,4,8,PATH);fillR(22,2,6,6,GRASS);
+  fillR(2,2,8,5,TALL);fillR(3,3,6,3,GRASS);
+  fillR(37,1,MW-38,MH-2,TREE);
+  fillR(39,8,11,9,ROCK);fillR(40,9,9,7,GRASS);
+  fillR(48,14,8,7,GRASS);
+  fillR(37,19,4,5,PATH);fillR(38,15,3,8,GRASS);
+  // Village (Thomas Lovell area)
+  fillR(14,9,24,23,GRASS);
+  hln(14,20,24,COBBLE);vln(24,8,25,COBBLE);
+  hln(16,15,16,COBBLE);hln(16,27,16,COBBLE);
+  vln(32,15,13,COBBLE);vln(17,15,8,COBBLE);
+  fillR(16,11,6,5,HOUSE);setT(18,15,COBBLE);setT(19,15,COBBLE);
+  fillR(27,11,6,5,HOUSE);setT(29,15,COBBLE);setT(30,15,COBBLE);
+  fillR(16,22,5,4,HOUSE);setT(17,22,COBBLE);setT(18,22,COBBLE);
+  fillR(27,22,7,5,HOUSE);setT(29,22,COBBLE);setT(30,22,COBBLE);
+  fillR(22,11,5,4,FLOWER);
+  setT(22,19,ROCK);setT(22,20,ROCK);
+  // Southern meadow
+  fillR(3,30,33,11,GRASS);
+  for(let y=30;y<41;y++)for(let x=3;x<35;x++){
+    const n=Math.sin(x*7.13+y*13.71)*Math.cos(x*3.37-y*5.11);
+    if(n>0.22)setT(x,y,FLOWER);
+  }
+  for(let y=33;y<38;y++)for(let x=7;x<12;x++){
+    const dy=(y-35.5)/2.5,dx=(x-9.5)/2.5;
+    if(dy*dy+dx*dx<0.85)setT(x,y,WATER);
+  }
+  vln(24,27,14,COBBLE);hln(14,36,12,PATH);
+  for(let y=22;y<30;y++)for(let x=14;x<37;x++){
+    if(world[y][x]===GRASS&&Math.sin(x*4.77+y*9.31)>0.58)setT(x,y,TALL);
+  }
+  fillR(22,18,6,5,GRASS);vln(24,18,5,COBBLE);
+  // NE Scruggs Rd east-west across map
+  hln(5,26,36,PATH);
+  // NE Todd George Rd north-south (west side, below lake)
+  vln(3,23,17,PATH);
+
+  // ════ LAKE JACOMO — irregular hook-arm shape ══════════
+  // Applied last so it correctly overlays village terrain
+  // Main western body
+  const lM=[[12,2,13],[13,2,13],[14,2,12],[15,2,11],[16,2,10],
+            [17,3,11],[18,4,12],[19,5,11],[20,6,10],[21,7,9]];
+  // Upper northeastern arm (matches real lake's long arm)
+  const lA=[[8,9,18],[9,8,18],[10,6,17],[11,5,15],[12,3,14],[13,2,13]];
+  // Hook — the distinctive curved eastern lobe from the photo
+  const lH=[[8,17,22],[9,18,22],[10,19,22],[11,19,21],[12,18,20]];
+  for(const [y,x0,x1] of [...lM,...lA,...lH]) hln(x0,y,x1-x0,WATER);
+  // Sandy shores
+  for(let y=7;y<23;y++)for(let x=1;x<24;x++){
+    if(world[y][x]===GRASS&&[[0,-1],[0,1],[-1,0],[1,0]].some(([dx,dy])=>getT(x+dx,y+dy)===WATER))
+      setT(x,y,SAND);
+  }
+  for(let y=32;y<39;y++)for(let x=6;x<13;x++){
+    if((world[y][x]===GRASS||world[y][x]===FLOWER)&&
+      [[0,-1],[0,1],[-1,0],[1,0]].some(([dx,dy])=>getT(x+dx,y+dy)===WATER))
+      setT(x,y,SAND);
+  }
+  // Island with stepping stones to the peninsula
+  fillR(8,13,3,3,SAND);setT(9,14,GRASS);
+  setT(11,14,SAND);setT(12,14,SAND);
+  // Re-guarantee start area
+  fillR(22,18,6,5,GRASS);vln(24,18,5,COBBLE);
+  // Cave area — must come last so east-forest fill doesn't overwrite it
+  fillR(43,2,11,6,GRASS);          // cave clearing
+  fillR(45,6,6,4,PATH);            // entrance passage through tree/rock barrier rows 6-9
+})();
+// Level world helpers
+const LEVEL1_WORLD=world.map(r=>new Uint8Array(r));
+function resetWorld(){for(let y=0;y<MH;y++)world[y].fill(GRASS);}
+function restoreLevel1(){for(let y=0;y<MH;y++)world[y].set(LEVEL1_WORLD[y]);}
+
+// ── Tile drawing ───────────────────────────────────────
+let tick=0;
+function drawTile(tx,ty,sx,sy){
+  const t=getT(tx,ty);
+  switch(t){
+    case GRASS:{
+      // Vibrant base with subtle checkerboard break
+      const shade=(tx+ty)%3;
+      ctx.fillStyle=shade===0?'#5ed62e':shade===1?'#54cc26':'#4ec424';
+      ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle='rgba(0,0,0,0.06)';
+      ctx.fillRect(sx+(tx*17+ty*11)%26,sy+(tx*13+ty*19)%26,2,2);
+      if((tx*7+ty*3)%5===0){ctx.fillStyle='rgba(255,255,255,0.07)';ctx.fillRect(sx+(tx*23+ty*7)%24,sy+(ty*19+tx*11)%24,3,1);}
+      break;
+    }
+    case PATH:{
+      ctx.fillStyle='#d8a848';ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle='rgba(0,0,0,0.1)';
+      if((tx+ty)%3===0){ctx.fillRect(sx+4,sy+8,9,3);ctx.fillRect(sx+18,sy+21,6,2);}
+      ctx.fillStyle='rgba(255,255,255,0.08)';ctx.fillRect(sx,sy,TS,3);
+      break;
+    }
+    case TREE:{
+      ctx.fillStyle='#2a5c18';ctx.fillRect(sx,sy,TS,TS);
+      // Shadow
+      ctx.fillStyle='rgba(0,0,0,0.28)';ctx.beginPath();ctx.arc(sx+18,sy+19,13,0,Math.PI*2);ctx.fill();
+      // Main canopy layers
+      ctx.fillStyle='#145c0c';ctx.beginPath();ctx.arc(sx+16,sy+14,13,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#1e8014';ctx.beginPath();ctx.arc(sx+14,sy+12,10,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#28a81c';ctx.beginPath();ctx.arc(sx+13,sy+10,7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#3cc828';ctx.beginPath();ctx.arc(sx+11,sy+8,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.14)';ctx.beginPath();ctx.arc(sx+10,sy+7,2.5,0,Math.PI*2);ctx.fill();
+      break;
+    }
+    case WATER:{
+      ctx.fillStyle='#0898e0';ctx.fillRect(sx,sy,TS,TS);
+      // Animated ripples
+      const wv=Math.sin(tick*0.04+tx*0.7+ty*1.2)*2.5;
+      const wv2=Math.sin(tick*0.03+tx*1.1+ty*0.8+2)*2;
+      ctx.fillStyle='rgba(80,210,255,0.45)';
+      ctx.fillRect(sx+1,sy+6+wv,12,2.5);
+      ctx.fillRect(sx+16,sy+18-wv2,9,2.5);
+      ctx.fillRect(sx+4,sy+26+wv2,14,2);
+      // Surface sheen
+      ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(sx,sy,TS,3);
+      // Deep shadow
+      ctx.fillStyle='rgba(0,40,100,0.15)';ctx.fillRect(sx,sy+TS-4,TS,4);
+      break;
+    }
+    case SAND:{
+      ctx.fillStyle='#f0d078';ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle='rgba(0,0,0,0.08)';
+      if((tx*3+ty*5)%4===0){ctx.fillRect(sx+7,sy+10,6,2);ctx.fillRect(sx+19,sy+21,5,2);}
+      ctx.fillStyle='rgba(255,255,255,0.12)';ctx.fillRect(sx,sy,TS,3);
+      break;
+    }
+    case FLOWER:{
+      ctx.fillStyle='#54cc26';ctx.fillRect(sx,sy,TS,TS);
+      const fc=(tx*5+ty*7)%3;
+      const fcols=['#ff3366','#ffcc00','#ff66cc'];
+      const fx1=sx+(tx*13+7)%18+4,fy1=sy+(ty*11+5)%14+5;
+      ctx.fillStyle=fcols[fc];ctx.beginPath();ctx.arc(fx1,fy1,5,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.9)';ctx.beginPath();ctx.arc(fx1,fy1,2,0,Math.PI*2);ctx.fill();
+      const fx2=sx+(tx*7+15)%18+7,fy2=sy+(ty*9+11)%14+12;
+      ctx.fillStyle=fcols[(fc+1)%3];ctx.beginPath();ctx.arc(fx2,fy2,4,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.9)';ctx.beginPath();ctx.arc(fx2,fy2,1.5,0,Math.PI*2);ctx.fill();
+      break;
+    }
+    case TALL:{
+      ctx.fillStyle='#3cc030';ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle='#1e8010';
+      for(let i=2;i<TS-2;i+=5){const h2=10+Math.sin(i*0.7+tick*0.06)*2.5;ctx.fillRect(sx+i,sy+TS-h2,2.5,h2);}
+      break;
+    }
+    case COBBLE:{
+      ctx.fillStyle='#b0ac98';ctx.fillRect(sx,sy,TS,TS);
+      // Highlight top
+      ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(sx,sy,TS,3);
+      ctx.strokeStyle='rgba(20,18,10,0.4)';ctx.lineWidth=1;
+      if((tx+ty)%2===0){
+        ctx.strokeRect(sx+1,sy+1,15,14);ctx.strokeRect(sx+17,sy+1,13,14);ctx.strokeRect(sx+7,sy+16,18,14);
+      }else{
+        ctx.strokeRect(sx+1,sy+1,28,14);ctx.strokeRect(sx+1,sy+16,13,14);ctx.strokeRect(sx+15,sy+16,14,14);
+      }
+      break;
+    }
+    case ROCK:{
+      ctx.fillStyle='#888878';ctx.fillRect(sx,sy,TS,TS);
+      ctx.fillStyle='#505048';ctx.fillRect(sx+2,sy+2,14,11);ctx.fillRect(sx+17,sy+16,11,10);
+      ctx.fillStyle='rgba(255,255,255,0.1)';ctx.fillRect(sx+3,sy+3,6,4);
+      break;
+    }
+    case HOUSE:{
+      if(getT(tx,ty-1)!==HOUSE){
+        ctx.fillStyle='#c03818';ctx.fillRect(sx,sy,TS,TS);
+        ctx.fillStyle='#e04828';ctx.fillRect(sx,sy,TS,5);
+        ctx.fillStyle='rgba(0,0,0,0.2)';for(let i=0;i<TS;i+=8)ctx.fillRect(sx+i,sy,4,TS);
+        ctx.fillStyle='rgba(255,255,255,0.08)';ctx.fillRect(sx,sy,TS,2);
+      }else{
+        ctx.fillStyle='#f0d0a0';ctx.fillRect(sx,sy,TS,TS);
+        ctx.fillStyle='rgba(255,255,255,0.15)';ctx.fillRect(sx,sy,TS,3);
+        ctx.fillStyle='rgba(100,160,210,0.4)';ctx.fillRect(sx+3,sy+4,6,8);ctx.fillRect(sx+23,sy+4,6,8);
+        ctx.fillStyle='rgba(255,255,255,0.2)';ctx.fillRect(sx+3,sy+4,3,3);ctx.fillRect(sx+23,sy+4,3,3);
+        ctx.fillStyle='rgba(0,0,0,0.05)';ctx.fillRect(sx,sy+TS-3,TS,3);
+      }
+      break;
+    }
+  }
+}
+
+// ── Entity base ────────────────────────────────────────
+class Entity{
+  constructor(wx,wy,w,h){this.wx=wx;this.wy=wy;this.w=w;this.h=h;}
+  get cx(){return this.wx+this.w/2;}
+  get cy(){return this.wy+this.h/2;}
+  get tileX(){return Math.floor(this.cx/TS);}
+  get tileY(){return Math.floor(this.cy/TS);}
+  tryMove(dx,dy){
+    const ox=3,oy=3,pw=this.w-6,ph=this.h-6;
+    this.wx+=dx;
+    let bx0=Math.floor((this.wx+ox)/TS),bx1=Math.floor((this.wx+ox+pw-1)/TS);
+    let by0=Math.floor((this.wy+oy)/TS),by1=Math.floor((this.wy+oy+ph-1)/TS);
+    for(let x=bx0;x<=bx1;x++)for(let y=by0;y<=by1;y++){
+      if(isSolid(x,y)){dx>0?(this.wx=x*TS-this.w-ox):(this.wx=(x+1)*TS-ox);}
+    }
+    this.wy+=dy;
+    bx0=Math.floor((this.wx+ox)/TS);bx1=Math.floor((this.wx+ox+pw-1)/TS);
+    by0=Math.floor((this.wy+oy)/TS);by1=Math.floor((this.wy+oy+ph-1)/TS);
+    for(let x=bx0;x<=bx1;x++)for(let y=by0;y<=by1;y++){
+      if(isSolid(x,y)){dy>0?(this.wy=y*TS-this.h-oy):(this.wy=(y+1)*TS-oy);}
+    }
+    this.wx=Math.max(TS,Math.min(MW*TS-this.w-TS,this.wx));
+    this.wy=Math.max(TS,Math.min(MH*TS-this.h-TS,this.wy));
+  }
+  dist(o){const dx=this.cx-o.cx,dy=this.cy-o.cy;return Math.sqrt(dx*dx+dy*dy);}
+}
+
+// ── Player ─────────────────────────────────────────────
+class Player extends Entity{
+  constructor(){
+    super(24*TS+5,20*TS+5,22,22);
+    this.char=0;this.hp=6;this.maxHp=6;
+    this.facing={x:0,y:1};this.animT=0;this.moving=false;
+    this.inv=0;this.atkT=0;
+    this.shadowWx=this.wx;this.shadowWy=this.wy;
+  }
+  update(){
+    let dx=0,dy=0;
+    if(K.left)dx=-1;else if(K.right)dx=1;
+    if(K.up)dy=-1;else if(K.down)dy=1;
+    if(dx&&dy){dx*=0.707;dy*=0.707;}
+    const spd=this.char===0?3.2:2.8;
+    const slow=getT(this.tileX,this.tileY)===TALL?0.55:1;
+    if(dx||dy){
+      this.tryMove(dx*spd*slow,dy*spd*slow);
+      this.facing={x:Math.sign(dx)||0,y:Math.sign(dy)||0};
+      this.animT++;this.moving=true;
+      // footstep dust every 10 frames
+      if(this.animT%10===0){
+        G.fx.push({type:'dust',x:this.cx+(Math.random()-0.5)*6,y:this.wy+this.h-2,vx:(Math.random()-0.5)*1.2,vy:-Math.random()*1.2-0.3,life:18,ml:18});
+      }
+    }else{this.animT=0;this.moving=false;}
+    // Shadow companion lags behind
+    const offX=this.facing.x?-this.facing.x*14:0;
+    this.shadowWx+=(this.wx+offX-this.shadowWx)*0.10;
+    this.shadowWy+=(this.wy+6-this.shadowWy)*0.10;
+    if(this.inv>0)this.inv--;
+    if(this.atkT>0)this.atkT--;
+  }
+  attack(){if(this.atkT<=0)this.atkT=22;}
+  draw(camX,camY){
+    // Draw inactive companion as shadow behind active player
+    const csx=this.shadowWx-camX,csy=this.shadowWy-camY;
+    const csc=this.char!==0; // draw the OTHER character
+    const ctopC=csc?C.scTop:C.fxTop,cbotC=csc?C.scBot:C.fxBot,chairC=csc?C.scHair:C.fxHair;
+    ctx.globalAlpha=0.48;
+    ctx.fillStyle='rgba(0,0,0,0.1)';ctx.beginPath();ctx.ellipse(csx+11,csy+21,8,3,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=cbotC;ctx.fillRect(csx+4,csy+12,14,10);
+    ctx.fillStyle=ctopC;ctx.fillRect(csx+4,csy+11,14,6);
+    ctx.fillStyle=C.skin;ctx.beginPath();ctx.arc(csx+11,csy+7,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=chairC;ctx.beginPath();ctx.arc(csx+11,csy+4,7,Math.PI,0);ctx.fill();
+    if(csc){ctx.fillRect(csx+2,csy+3,3,5);ctx.fillRect(csx+17,csy+3,3,5);}
+    else{ctx.fillRect(csx+1,csy+2,4,7);ctx.fillRect(csx+17,csy+2,4,7);}
+    ctx.globalAlpha=1;
+    if(this.inv>0&&Math.floor(this.inv/5)%2===0)return;
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const sc=this.char===0;
+    const topC=sc?C.scTop:C.fxTop,botC=sc?C.scBot:C.fxBot,hairC=sc?C.scHair:C.fxHair;
+    const bob=this.moving?Math.sin(this.animT*0.38)*1.5:0;
+    const fx=this.facing.x,fy=this.facing.y;
+    ctx.fillStyle='rgba(0,0,0,0.18)';
+    ctx.beginPath();ctx.ellipse(sx+11,sy+21,9,4,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=botC;ctx.fillRect(sx+4,sy+12+bob,14,10);
+    ctx.fillStyle=topC;ctx.fillRect(sx+4,sy+11+bob,14,6);
+    ctx.fillStyle=topC;ctx.fillRect(sx+0,sy+12-bob,4,7);ctx.fillRect(sx+18,sy+12+bob,4,7);
+    ctx.fillStyle=C.skin;ctx.fillRect(sx+0,sy+19-bob,4,4);ctx.fillRect(sx+18,sy+19+bob,4,4);
+    ctx.fillStyle=C.skin;ctx.beginPath();ctx.arc(sx+11,sy+7+bob,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=hairC;ctx.beginPath();ctx.arc(sx+11,sy+4+bob,7,Math.PI,0);ctx.fill();
+    if(sc){
+      // Scout: short hair with swoop across forehead
+      ctx.fillRect(sx+2,sy+3+bob,3,5);    // left side
+      ctx.fillRect(sx+17,sy+3+bob,3,5);   // right side
+      ctx.fillRect(sx+5,sy+1+bob,13,3);   // base fringe
+      // Hair swoop — curves from left across forehead to right
+      ctx.beginPath();
+      ctx.moveTo(sx+2,sy+4+bob);
+      ctx.bezierCurveTo(sx+8,sy-2+bob, sx+16,sy+0+bob, sx+20,sy+5+bob);
+      ctx.bezierCurveTo(sx+16,sy+3+bob, sx+8,sy+1+bob, sx+2,sy+6+bob);
+      ctx.closePath();ctx.fill();
+      // Gold hoop earring — small and subtle
+      if(fy>=0||fx<0){
+        ctx.strokeStyle='#FFD060';ctx.lineWidth=1.2;
+        ctx.beginPath();ctx.arc(sx+19,sy+9+bob,1.8,0,Math.PI*2);ctx.stroke();
+        ctx.lineWidth=1;
+      }
+    }else{
+      // Fox: medium wavy hair — a little longer, not past ears
+      ctx.fillStyle=hairC;
+      // Slightly wider base arc
+      ctx.beginPath();ctx.arc(sx+11,sy+3+bob,8,Math.PI,0);ctx.fill();
+      // Short sides — just at ear level, slight wave
+      ctx.fillRect(sx+1,sy+3+bob,4,6);
+      ctx.fillRect(sx+17,sy+3+bob,4,6);
+      // Tiny wave flip at bottom of sides
+      ctx.fillRect(sx+0,sy+8+bob,5,2);
+      ctx.fillRect(sx+17,sy+8+bob,5,2);
+      // Messy wavy top
+      ctx.fillRect(sx+5,sy-2+bob,5,5);
+      ctx.fillRect(sx+10,sy-3+bob,5,5);
+      ctx.fillRect(sx+14,sy-1+bob,4,4);
+    }
+    if(fy>0){
+      ctx.fillStyle='#2A1408';ctx.fillRect(sx+7,sy+8+bob,2,2);ctx.fillRect(sx+14,sy+8+bob,2,2);
+      ctx.fillStyle='rgba(220,100,90,0.7)';ctx.fillRect(sx+9,sy+12+bob,5,2);
+    }else if(fy<0){
+      ctx.fillStyle=hairC;ctx.beginPath();ctx.arc(sx+11,sy+7+bob,7,0,Math.PI*2);ctx.fill();
+    }else{
+      ctx.fillStyle='#2A1408';ctx.fillRect(fx>0?sx+13:sx+7,sy+8+bob,2,2);
+    }
+    if(this.atkT>0){
+      const prog=(22-this.atkT)/22;
+      ctx.strokeStyle=sc?`rgba(80,220,160,${(1-prog)*0.85})`:`rgba(255,150,40,${(1-prog)*0.85})`;
+      ctx.lineWidth=4-prog*2;
+      const ang=Math.atan2(this.facing.y,this.facing.x);
+      ctx.beginPath();ctx.arc(sx+11+this.facing.x*18,sy+11+this.facing.y*18,14+prog*8,ang-0.85,ang+0.85);ctx.stroke();
+      ctx.lineWidth=1;
+    }
+  }
+}
+
+// ── Enemy ──────────────────────────────────────────────
+class Enemy extends Entity{
+  constructor(tx,ty,type){
+    super(tx*TS+5,ty*TS+5,22,22);
+    this.type=type;this.hp=3;this.state='idle';
+    this.hurtT=0;this.animT=0;this.patrolT=0;
+    this.ox=this.wx;this.oy=this.wy;this.dead=false;this.deadT=0;this.hpShowT=0;
+  }
+  update(player){
+    if(this.dead){this.deadT++;return;}
+    if(this.state==='hurt'){if(--this.hurtT<=0)this.state='idle';return;}
+    this.animT++;
+    const d=this.dist(player);
+    if(d<5*TS)this.state='chase';else this.state='idle';
+    if(this.state==='chase'){
+      const dx=player.cx-this.cx,dy=player.cy-this.cy,l=Math.sqrt(dx*dx+dy*dy)||1;
+      const sp=[1.8,1.5,2.4,1.9][this.type];
+      if(l>24)this.tryMove(dx/l*sp,dy/l*sp);
+      if(l<24&&player.inv<=0){
+        player.hp--;player.inv=160;G.shakeT=8;Music.sfx.hit();
+        player.wx+=(player.cx-this.cx)/l*7;player.wy+=(player.cy-this.cy)/l*7;
+        if(player.hp<=0)G.die();
+      }
+    }else{
+      const sp=0.7,phase=Math.floor(this.patrolT/60)%4;
+      [[sp,0],[0,sp],[-sp,0],[0,-sp]].forEach((d,i)=>{if(i===phase)this.tryMove(...d);});
+      this.patrolT++;
+      const dx=this.ox-this.wx,dy=this.oy-this.wy;
+      if(Math.abs(dx)>TS*3||Math.abs(dy)>TS*3){const l=Math.sqrt(dx*dx+dy*dy);this.tryMove(dx/l*1.5,dy/l*1.5);}
+    }
+  }
+  hit(player){
+    if(this.dead||this.state==='hurt')return;
+    this.hp--;this.state='hurt';this.hurtT=18;this.hpShowT=70;
+    const dx=this.cx-player.cx,dy=this.cy-player.cy,l=Math.sqrt(dx*dx+dy*dy)||1;
+    this.wx+=dx/l*26;this.wy+=dy/l*26;
+    // hit sparks
+    for(let i=0;i<7;i++){
+      const a=(i/7)*Math.PI*2;
+      G.fx.push({type:'spark',x:this.cx,y:this.cy,vx:Math.cos(a)*2.8,vy:Math.sin(a)*2.8,life:16,ml:16,col:['#FFD060','#FF8020','#FF4444'][i%3]});
+    }
+    if(this.hp<=0){this.dead=true;this.deadT=0;G.score+=150;G.fx.push({x:this.cx,y:this.cy-16,txt:'+150',life:50,col:C.gold});}
+  }
+  draw(camX,camY){
+    if(this.dead&&this.deadT>28)return;
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const bob=Math.sin(this.animT*0.2)*2;
+    ctx.globalAlpha=this.dead?(1-this.deadT/28):(this.state==='hurt'?0.5:1);
+    switch(this.type){
+      case 0:
+        ctx.fillStyle=C.brD;ctx.beginPath();ctx.arc(sx+11,sy+11+bob,12,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=C.brC;ctx.beginPath();ctx.arc(sx+11,sy+10+bob,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=C.brD;
+        for(let i=0;i<7;i++){const a=(i/7)*Math.PI*2;ctx.fillRect(sx+11+Math.cos(a)*11,sy+10+bob+Math.sin(a)*11,3,3);}
+        ctx.fillStyle=C.brE;ctx.fillRect(sx+6,sy+7+bob,3,3);ctx.fillRect(sx+13,sy+7+bob,3,3);
+        break;
+      case 1:
+        ctx.fillStyle=C.goD;ctx.fillRect(sx+2,sy+2,18,18);
+        ctx.fillStyle=C.goC;ctx.fillRect(sx+3,sy+3,16,16);
+        ctx.fillStyle=C.goD;ctx.fillRect(sx+3,sy+3,6,5);ctx.fillRect(sx+13,sy+3,6,5);
+        ctx.fillStyle=C.goE;ctx.fillRect(sx+5,sy+6+bob,4,4);ctx.fillRect(sx+13,sy+6+bob,4,4);
+        ctx.fillStyle=C.goD;ctx.fillRect(sx+6,sy+13,9,3);
+        break;
+      case 2:
+        ctx.fillStyle=C.wiC;ctx.beginPath();ctx.arc(sx+11,sy+11+bob*2,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=C.wiL;ctx.beginPath();ctx.arc(sx+11,sy+11+bob*2,6,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=C.wiG;ctx.beginPath();ctx.arc(sx+11,sy+11+bob*2,3,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(180,100,255,0.18)';ctx.beginPath();ctx.arc(sx+11,sy+11+bob*2,16,0,Math.PI*2);ctx.fill();
+        break;
+      case 3:
+        ctx.fillStyle=C.spD;ctx.beginPath();ctx.arc(sx+11,sy+12+bob,10,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=C.spC;ctx.beginPath();ctx.arc(sx+11,sy+11+bob,8,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=C.spD;ctx.fillRect(sx+3,sy+4+bob,4,7);ctx.fillRect(sx+15,sy+4+bob,4,7);
+        ctx.fillStyle=C.spC;ctx.fillRect(sx+4,sy+5+bob,2,5);ctx.fillRect(sx+16,sy+5+bob,2,5);
+        ctx.fillStyle='#1E0C04';ctx.fillRect(sx+7,sy+9+bob,3,3);ctx.fillRect(sx+12,sy+9+bob,3,3);
+        break;
+    }
+    ctx.globalAlpha=1;
+    // health bar when recently hit
+    if(this.hpShowT>0&&!this.dead){
+      this.hpShowT--;
+      const bw=28,bh=4,bx=sx+11-bw/2,by=sy-8;
+      ctx.fillStyle='rgba(0,0,0,0.4)';ctx.fillRect(bx,by,bw,bh);
+      ctx.fillStyle=this.hp===3?'#22c55e':this.hp===2?'#f59e0b':'#ef4444';
+      ctx.fillRect(bx,by,bw*(this.hp/this.maxHp),bh);
+    }
+  }
+}
+
+// ── NPC ────────────────────────────────────────────────
+class NPC extends Entity{
+  constructor(tx,ty,name,bodyC,hairC,lines){
+    super(tx*TS+7,ty*TS+7,18,18);
+    this.name=name;this.bodyC=bodyC;this.hairC=hairC;this.lines=lines;
+  }
+  draw(camX,camY){
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const bob=Math.sin(tick*0.045)*1.5;
+    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.beginPath();ctx.ellipse(sx+9,sy+19,8,3,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=this.bodyC;ctx.beginPath();ctx.arc(sx+9,sy+11+bob,9,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=C.skin;ctx.beginPath();ctx.arc(sx+9,sy+5+bob,6,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=this.hairC;ctx.beginPath();ctx.arc(sx+9,sy+3+bob,6,Math.PI,0);ctx.fill();
+    ctx.fillStyle='#1E0C04';ctx.fillRect(sx+6,sy+5+bob,2,2);ctx.fillRect(sx+11,sy+5+bob,2,2);
+  }
+}
+
+// ── Lore item ──────────────────────────────────────────
+class LoreItem extends Entity{
+  constructor(tx,ty,name,text,kind='lollipop'){
+    super(tx*TS+8,ty*TS+8,16,16);
+    this.name=name;this.text=text;this.kind=kind;
+    this.collected=false;this.t=Math.random()*Math.PI*2;
+    this.itx=tx;this.ity=ty;
+  }
+  update(){this.t+=0.055;}
+  draw(camX,camY){
+    if(this.collected)return;
+    const sx=this.wx-camX,sy=this.wy-camY,bob=Math.sin(this.t)*3;
+    const glow=0.18+Math.sin(this.t*1.3)*0.06;
+    // value badge
+    const val=CANDY_VALUE[this.kind]||50;
+    const glowCol=val>=75?'rgba(255,200,50,'+glow+')':val>=50?'rgba(255,120,180,'+glow+')':'rgba(120,220,255,'+glow+')';
+    ctx.fillStyle=glowCol;ctx.beginPath();ctx.arc(sx+8,sy+8+bob,15,0,Math.PI*2);ctx.fill();
+    switch(this.kind){
+      case 'lollipop':{
+        ctx.strokeStyle='#7A3800';ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(sx+8,sy+14+bob);ctx.lineTo(sx+11,sy+22+bob);ctx.stroke();
+        const lc=['#FF2060','#FF5010','#CC10AA','#FF8000'][(this.itx*3+this.ity*7)%4];
+        ctx.fillStyle=lc;ctx.beginPath();ctx.arc(sx+8,sy+7+bob,8,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(255,220,240,0.65)';ctx.beginPath();ctx.arc(sx+8,sy+7+bob,5,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.arc(sx+8,sy+7+bob,4,0.4,Math.PI-0.4);ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,0.6)';ctx.beginPath();ctx.arc(sx+5,sy+4+bob,2,0,Math.PI*2);ctx.fill();
+        break;
+      }
+      case 'chocolate':{
+        // Chocolate bar
+        ctx.fillStyle='#5C2800';ctx.fillRect(sx+1,sy+4+bob,20,16);
+        ctx.fillStyle='#8B4010';ctx.fillRect(sx+2,sy+5+bob,18,14);
+        ctx.fillStyle='#6B3008';
+        ctx.fillRect(sx+8,sy+5+bob,1,14);ctx.fillRect(sx+14,sy+5+bob,1,14);
+        ctx.fillRect(sx+2,sy+11+bob,18,1);
+        ctx.fillStyle='rgba(255,180,100,0.3)';ctx.fillRect(sx+2,sy+5+bob,18,4);
+        ctx.fillStyle='rgba(255,255,255,0.15)';ctx.fillRect(sx+3,sy+6+bob,5,2);
+        break;
+      }
+      case 'gumball':{
+        // Shiny gumball
+        const gc=['#FF3060','#20C0FF','#60E020','#FF8020','#C020FF'][(this.itx+this.ity*2)%5];
+        ctx.fillStyle=gc;ctx.beginPath();ctx.arc(sx+8,sy+8+bob,9,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,0.5)';
+        ctx.beginPath();ctx.arc(sx+5,sy+4+bob,3.5,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,0.2)';
+        ctx.beginPath();ctx.arc(sx+8,sy+8+bob,8,0,Math.PI*2);ctx.fill();
+        break;
+      }
+      case 'gummy':{
+        // Gummy bear
+        const gbc=['#FF3060','#FF8020','#20C040','#FFD020','#FF20A0'][(this.itx*2+this.ity)%5];
+        ctx.fillStyle=gbc;
+        // body
+        ctx.beginPath();ctx.ellipse(sx+8,sy+13+bob,6,7,0,0,Math.PI*2);ctx.fill();
+        // head
+        ctx.beginPath();ctx.arc(sx+8,sy+6+bob,5,0,Math.PI*2);ctx.fill();
+        // ears
+        ctx.beginPath();ctx.arc(sx+4,sy+3+bob,2.5,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(sx+12,sy+3+bob,2.5,0,Math.PI*2);ctx.fill();
+        // shine
+        ctx.fillStyle='rgba(255,255,255,0.4)';ctx.beginPath();ctx.arc(sx+6,sy+4+bob,1.5,0,Math.PI*2);ctx.fill();
+        // eyes
+        ctx.fillStyle='rgba(0,0,0,0.5)';ctx.fillRect(sx+6,sy+5+bob,1.5,1.5);ctx.fillRect(sx+9,sy+5+bob,1.5,1.5);
+        break;
+      }
+      case 'taffy':{
+        // Twisted taffy
+        const tc=['#FFB0D0','#B0E0FF','#FFFFA0','#D0FFB0'][(this.itx+this.ity*3)%4];
+        const tc2=['#FF80A0','#80C0FF','#FFFF60','#A0FF80'][(this.itx+this.ity*3)%4];
+        ctx.fillStyle=tc;ctx.fillRect(sx+3,sy+5+bob,18,14);
+        // twist stripes
+        ctx.fillStyle=tc2;
+        for(let i=0;i<4;i++){ctx.fillRect(sx+3+i*5,sy+5+bob,2,14);}
+        // wrapper ends
+        ctx.fillStyle='rgba(255,255,255,0.6)';ctx.fillRect(sx+1,sy+7+bob,4,10);ctx.fillRect(sx+19,sy+7+bob,4,10);
+        ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=1;ctx.strokeRect(sx+3,sy+5+bob,18,14);
+        break;
+      }
+      case 'hardcandy':{
+        // Wrapped hard candy
+        const hcc=['#FF4040','#4080FF','#40CC40','#FF8800'][(this.itx*2+this.ity*5)%4];
+        ctx.fillStyle=hcc;ctx.beginPath();ctx.ellipse(sx+8,sy+9+bob,7,6,0,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,0.35)';ctx.beginPath();ctx.ellipse(sx+6,sy+6+bob,3,2,-.5,0,Math.PI*2);ctx.fill();
+        // wrapper twists
+        ctx.fillStyle='rgba(255,255,255,0.8)';
+        ctx.fillRect(sx+1,sy+7+bob,3,4);ctx.fillRect(sx+13,sy+8+bob,3,3);
+        ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;
+        ctx.beginPath();ctx.moveTo(sx+1,sy+7+bob);ctx.lineTo(sx+3,sy+5+bob);ctx.stroke();
+        ctx.beginPath();ctx.moveTo(sx+13,sy+8+bob);ctx.lineTo(sx+16,sy+6+bob);ctx.stroke();
+        break;
+      }
+      case 'candycorn':{
+        // Candy corn
+        ctx.fillStyle='#FF8000';
+        ctx.beginPath();ctx.moveTo(sx+8,sy+3+bob);ctx.lineTo(sx+2,sy+18+bob);ctx.lineTo(sx+14,sy+18+bob);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#FFD000';
+        ctx.beginPath();ctx.moveTo(sx+8,sy+10+bob);ctx.lineTo(sx+3,sy+18+bob);ctx.lineTo(sx+13,sy+18+bob);ctx.closePath();ctx.fill();
+        ctx.fillStyle='#FFF8F0';
+        ctx.beginPath();ctx.moveTo(sx+8,sy+14+bob);ctx.lineTo(sx+5,sy+18+bob);ctx.lineTo(sx+11,sy+18+bob);ctx.closePath();ctx.fill();
+        break;
+      }
+      case 'jawbreaker':{
+        // Jawbreaker - big round striped ball
+        ctx.fillStyle='#FF2020';ctx.beginPath();ctx.arc(sx+8,sy+8+bob,9,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#FFAA00';ctx.beginPath();ctx.arc(sx+8,sy+8+bob,7,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#20DD20';ctx.beginPath();ctx.arc(sx+8,sy+8+bob,5,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#2080FF';ctx.beginPath();ctx.arc(sx+8,sy+8+bob,3,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,0.5)';ctx.beginPath();ctx.arc(sx+5,sy+4+bob,2.5,0,Math.PI*2);ctx.fill();
+        break;
+      }
+      default:{
+        ctx.fillStyle='#FF2060';ctx.beginPath();ctx.arc(sx+8,sy+8+bob,8,0,Math.PI*2);ctx.fill();
+      }
+    }
+    // Value badge
+    ctx.fillStyle='rgba(0,0,0,0.55)';rr(sx,sy+bob-8,16,10,5);ctx.fill();
+    ctx.fillStyle='#FFD060';ctx.font=`700 8px ${F}`;ctx.textAlign='center';
+    ctx.fillText('+'+val,sx+8,sy+bob-1);
+  }
+}
+
+// ── Candy values ──────────────────────────────────────
+const CANDY_VALUE={lollipop:50,chocolate:75,gumball:30,gummy:40,taffy:35,hardcandy:60,candycorn:20,jawbreaker:80};
+class HealthPack extends Entity{
+  constructor(tx,ty){super(tx*TS+8,ty*TS+8,16,16);this.collected=false;this.t=Math.random()*Math.PI*2;}
+  update(){this.t+=0.04;}
+  draw(camX,camY){
+    if(this.collected)return;
+    const sx=this.wx-camX,sy=this.wy-camY,bob=Math.sin(this.t)*2;
+    ctx.fillStyle='rgba(200,160,80,0.18)';ctx.beginPath();ctx.arc(sx+8,sy+10+bob,12,0,Math.PI*2);ctx.fill();
+    // cracker stack
+    for(let i=2;i>=0;i--){
+      ctx.fillStyle=i===0?'#E8C878':'#D8B860';
+      ctx.fillRect(sx+3,sy+5+i*3+bob,16,5);
+      ctx.fillStyle='rgba(255,255,255,0.3)';ctx.fillRect(sx+3,sy+5+i*3+bob,16,1);
+      // dots
+      ctx.fillStyle='rgba(180,130,40,0.6)';
+      ctx.beginPath();ctx.arc(sx+8,sy+8+i*3+bob,1.5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(sx+13,sy+8+i*3+bob,1.5,0,Math.PI*2);ctx.fill();
+    }
+    // peanut butter smear
+    ctx.fillStyle='rgba(200,140,40,0.5)';ctx.fillRect(sx+4,sy+5+bob,14,3);
+    // small + icon
+    ctx.fillStyle='rgba(255,80,80,0.8)';ctx.font='bold 10px Georgia';ctx.textAlign='center';
+    ctx.fillText('+',sx+8,sy+1+bob);
+  }
+}
+
+// ── Dad NPC (special) ─────────────────────────────────
+class DadNPC extends Entity{
+  constructor(tx,ty){
+    super(tx*TS+2,ty*TS+2,22,22);
+    this.lines=[
+      '"THERE you are! I have been having the BEST adventure."',
+      '"I took the cart up the north path, found this amazing cave, and okay fine, I got a tiny bit lost."',
+      '"Did you follow all my clues? Thatcher, the jawbreaker was just for you! Eloise, I left the chocolate because I know you love it!"',
+      '"Alright, let us head home. Anyone want a peanut butter cracker? I have loads."',
+    ];
+    this.found=false;
+  }
+  draw(camX,camY){
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const bob=Math.sin(tick*0.04)*1;
+    // ── Golf cart (top-down, parked to the right) ──
+    const cx2=sx+30,cy2=sy-2;
+    // wheels
+    ctx.fillStyle='#1A1410';
+    ctx.fillRect(cx2-2,cy2+3,5,8);ctx.fillRect(cx2+19,cy2+3,5,8);
+    ctx.fillRect(cx2-2,cy2+17,5,8);ctx.fillRect(cx2+19,cy2+17,5,8);
+    // body
+    ctx.fillStyle='#F2EEE0';ctx.fillRect(cx2+2,cy2,18,28);
+    // canopy
+    ctx.fillStyle='#7EC850';ctx.fillRect(cx2+2,cy2,18,14);
+    ctx.fillStyle='#5CA030';ctx.fillRect(cx2+2,cy2+6,18,3);
+    // windshield
+    ctx.fillStyle='rgba(160,220,240,0.45)';ctx.fillRect(cx2+3,cy2+9,16,5);
+    // seat area
+    ctx.fillStyle='#D8D4C4';ctx.fillRect(cx2+2,cy2+14,18,14);
+    // steering wheel
+    ctx.fillStyle='#2A2010';ctx.beginPath();ctx.arc(cx2+12,cy2+20,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#F2EEE0';ctx.beginPath();ctx.arc(cx2+12,cy2+20,2,0,Math.PI*2);ctx.fill();
+    // flag
+    ctx.fillStyle='#1A1410';ctx.fillRect(cx2+18,cy2-10,2,12);
+    ctx.fillStyle='#E83030';ctx.fillRect(cx2+18,cy2-10,9,6);
+    ctx.fillStyle='#FF6060';ctx.fillRect(cx2+18,cy2-10,4,3);
+    // ── Dad character ──
+    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.beginPath();ctx.ellipse(sx+11,sy+21,10,4,0,0,Math.PI*2);ctx.fill();
+    // body (polo shirt — light blue)
+    ctx.fillStyle='#4888CC';ctx.beginPath();ctx.arc(sx+11,sy+13+bob,11,0,Math.PI*2);ctx.fill();
+    // shorts
+    ctx.fillStyle='#2A5A8A';ctx.fillRect(sx+4,sy+16+bob,16,8);
+    // arms
+    ctx.fillStyle='#4888CC';ctx.fillRect(sx+0,sy+11+bob,5,8);ctx.fillRect(sx+18,sy+11+bob,5,8);
+    ctx.fillStyle='#F4C890';ctx.fillRect(sx+0,sy+18+bob,5,5);ctx.fillRect(sx+18,sy+18+bob,5,5);
+    // head
+    ctx.fillStyle='#F4C890';ctx.beginPath();ctx.arc(sx+11,sy+6+bob,8,0,Math.PI*2);ctx.fill();
+    // golf cap
+    ctx.fillStyle='#7EC850';ctx.beginPath();ctx.arc(sx+11,sy+3+bob,8,Math.PI,0);ctx.fill();
+    ctx.fillRect(sx+3,sy+3+bob,17,3);
+    ctx.fillStyle='#5CA030';ctx.fillRect(sx-1,sy+5+bob,8,2); // brim
+    // face
+    ctx.fillStyle='#2A1408';ctx.fillRect(sx+7,sy+7+bob,2,2);ctx.fillRect(sx+13,sy+7+bob,2,2);
+    ctx.fillStyle='rgba(220,100,80,0.8)';
+    ctx.beginPath();ctx.arc(sx+11,sy+11+bob,3,0,Math.PI);ctx.fill(); // big smile
+  }
+}
+// ── Scoodles — orange tabby guide cat ─────────────────
+class ScoodlesNPC extends Entity{
+  constructor(tx,ty){
+    super(tx*TS+6,ty*TS+6,20,20);
+    this.met=false;
+    this._intro='"Hi hi hi! I am Scoodles! Come find me whenever you need help, okay?"';
+    this._pool=[
+      '"Your dad went north and left candy everywhere he walked. He is so funny."',
+      '"See anything glowing? Walk up to it and press E. Your dad left those for you two."',
+      '"I tried to follow your dad but my legs are too short for a golf cart. Very rude of him."',
+      '"The lake has a little island in it. There are stepping stones to get there."',
+      '"I am a cat. I know a lot about this world. Mostly where to nap."',
+      '"Those grumpy creatures are more scared of you than you are of them. Probably."',
+      '"If you get hurt, look for the stack of crackers lying around. Walk right into them."',
+      '"I explored the entire map while you were not looking. Very nice. I recommend it."',
+      '"The cave is up north. I scouted it. It smells like golf cart and peanut butter crackers."',
+      '"Press SPACE to bop the grumpy creatures. They do not actually want to fight."',
+      '"TAB switches between you two. Very handy. I cannot do that because I am a cat."',
+      '"Robert has a point about nearby creatures. He is not smart but he is not wrong."',
+      '"Talk to people! Press E near anyone standing around. Even me."',
+      '"Bramble in the village knows where your dad went. Worth a chat."',
+      '"Elder Willow by the lake is very wise. She is also very tall which I find unsettling."',
+      '"This meadow is very nice. I have been rolling in it."',
+      '"Those ruins are old. Very old. I do not know how old. Just. Old."',
+      '"The lake is cold. I checked with one paw and then I left immediately."',
+      '"Someone planted flowers out here. I appreciate the effort."',
+      '"The northern forest is dense. I went in once. There were smells."',
+      '"Robert vacuumed around my nap spot. I did not move. He went around me."',
+      '"Benny has been standing in the same spot for a while. He is fine. Probably dreaming."',
+      '"Benny asked me for a treat earlier. I do not have treats. I am a cat."',
+      '"I think Robert is happy. It is hard to tell with robots."',
+      '"Steph is always there if you need her. Just press Q."',
+      '"Bramble seems nice. Very energetic for someone who just stands there all day."',
+      '"Buddy would love that slime jar your dad left. I sniffed it. Disturbing. Interesting."',
+      '"Eloisey Lemon Squeezy, the little book your dad left is near the village. Just saying."',
+      '"I am glad you two are together. You are both braver when you are with each other."',
+      '"I found a warm patch of sun earlier. It was very good."',
+      '"I have been napping on and off since Tuesday."',
+      '"Sometimes I walk in a circle before I sit down. I do not know why. It is just something I do."',
+      '"I once caught a leaf. It was the best day of my life."',
+      '"Water. Interesting. I prefer not to touch it personally."',
+      '"I have been watching that tree for twenty minutes. Nothing has happened yet."',
+      '"My whiskers tell me things. Right now they are telling me to sit down for a while."',
+      '"I had a dream about a very large cracker. It was very stressful."',
+      '"Sometimes I knock things off ledges just to see what happens. For science."',
+      '"My tail is telling me something. I am not sure what. It does that sometimes."',
+      '"I have eaten today. Things are good."',
+      '"The grass here is very good grass. I give it four out of five paws."',
+      '"I find adventure very stimulating. Then I need to sleep for twelve hours."',
+      '"There was a butterfly earlier. It got away. I am still thinking about it."',
+      '"I see everything from low to the ground. It is a different perspective. Very grassy."',
+      '"Do you hear that? Me neither. Good."',
+      '"I am not scared of those creatures. I just prefer not to be near them. For my own reasons."',
+      '"I have followed all the candy wrappers your dad left behind. The trail is very clear."',
+      '"This is a good world. I am glad you are exploring it."',
+      '"If I had a golf cart I would also drive it into a cave. Just to see."',
+      '"Your dad seems fun. Also a little reckless. You two got that from somewhere."',
+      '"Benny is 14. That is very old for a dog. He has earned those treats honestly."',
+      '"I can see from here that there are bugs over there. Not enough to be interesting though."',
+      '"I once met another cat. We did not speak. We understood each other perfectly."',
+    ];
+    this.sitT=0;this.wanderT=0;this.animT=0;
+    this.wdx=0;this.wdy=0;
+  }
+  get lines(){
+    const pool=[...this._pool];
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    if(!this.met){
+      this.met=true;
+      return [this._intro,...pool.slice(0,3)];
+    }
+    return pool.slice(0,4);
+  }
+  update(player){
+    this.animT++;
+    const d=this.dist(player);
+    // Sit/groom — more frequent and longer than before
+    if(this.sitT>0){this.sitT--;return;}
+    if(d<6*TS&&Math.random()<0.006){this.sitT=80+Math.random()*120;return;}
+    // Change wander direction
+    this.wanderT--;
+    if(this.wanderT<=0){
+      this.wanderT=50+Math.random()*70;
+      const a=Math.random()*Math.PI*2;
+      this.wdx=Math.cos(a);this.wdy=Math.sin(a);
+    }
+    let mx,my;
+    if(d>12*TS){
+      // Only ambles after player when really far — no sprint, just a gentle trot
+      const dx=player.cx-this.cx,dy=player.cy-this.cy,l=Math.sqrt(dx*dx+dy*dy);
+      mx=dx/l*1.4+(Math.random()-.5)*.4;my=dy/l*1.4+(Math.random()-.5)*.4;
+    }else if(d>7*TS){
+      // Lazy drift in their general direction
+      const dx=player.cx-this.cx,dy=player.cy-this.cy,l=Math.sqrt(dx*dx+dy*dy);
+      mx=dx/l*0.8+(Math.random()-.5)*.5;my=dy/l*0.8+(Math.random()-.5)*.5;
+    }else{
+      // Meander nearby — mostly wanders, very gentle pull if drifting too far
+      mx=this.wdx*0.5;my=this.wdy*0.5;
+      if(d>5*TS){
+        const dx=player.cx-this.cx,dy=player.cy-this.cy,l=Math.sqrt(dx*dx+dy*dy);
+        mx+=dx/l*0.25;my+=dy/l*0.25;
+      }
+    }
+    this.tryMove(mx,my);
+  }
+  draw(camX,camY){
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const sitting=this.sitT>0;
+    const bob=sitting?0:Math.sin(tick*0.07)*1.8;
+    // Tail (sways side to side, droops when sitting)
+    const tailSwing=sitting?2:Math.sin(this.animT*0.09)*7;
+    ctx.strokeStyle='#C06018';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(sx+6,sy+18+bob);
+    ctx.quadraticCurveTo(sx-3+tailSwing,sy+24+bob,sx+2+tailSwing,sy+29+bob);ctx.stroke();
+    ctx.strokeStyle='#E07820';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(sx+6,sy+18+bob);
+    ctx.quadraticCurveTo(sx-2+tailSwing,sy+23+bob,sx+2+tailSwing,sy+28+bob);ctx.stroke();
+    ctx.lineWidth=1;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.beginPath();ctx.ellipse(sx+10,sy+20,9,3,0,0,Math.PI*2);ctx.fill();
+    // Body (slightly squished when sitting)
+    const bh=sitting?1.15:1;
+    ctx.fillStyle='#E07820';ctx.beginPath();ctx.ellipse(sx+10,sy+13+bob,9,9*bh,0,0,Math.PI*2);ctx.fill();
+    // Tabby body stripes
+    ctx.fillStyle='#B05010';
+    ctx.fillRect(sx+4,sy+11+bob,3,2);ctx.fillRect(sx+13,sy+11+bob,3,2);ctx.fillRect(sx+8,sy+9+bob,4,1.5);
+    // Head
+    ctx.fillStyle='#E87828';ctx.beginPath();ctx.arc(sx+10,sy+5+bob,7,0,Math.PI*2);ctx.fill();
+    // Ears
+    ctx.fillStyle='#E87828';
+    ctx.beginPath();ctx.moveTo(sx+5,sy+2+bob);ctx.lineTo(sx+2,sy-4+bob);ctx.lineTo(sx+8,sy+0+bob);ctx.fill();
+    ctx.beginPath();ctx.moveTo(sx+15,sy+2+bob);ctx.lineTo(sx+18,sy-4+bob);ctx.lineTo(sx+12,sy+0+bob);ctx.fill();
+    ctx.fillStyle='#FFB0A0';
+    ctx.beginPath();ctx.moveTo(sx+5.5,sy+1.5+bob);ctx.lineTo(sx+3.5,sy-2+bob);ctx.lineTo(sx+7.5,sy+0.5+bob);ctx.fill();
+    ctx.beginPath();ctx.moveTo(sx+14.5,sy+1.5+bob);ctx.lineTo(sx+16.5,sy-2+bob);ctx.lineTo(sx+12.5,sy+0.5+bob);ctx.fill();
+    // Forehead stripes
+    ctx.fillStyle='#C06010';ctx.fillRect(sx+7,sy+1+bob,7,1.5);ctx.fillRect(sx+8,sy+3+bob,5,1);
+    // Eyes — half-closed when sitting (sleepy cat)
+    ctx.fillStyle='#1A0C04';
+    if(sitting){
+      ctx.fillRect(sx+6,sy+5+bob,2.5,1.5); // squinted
+      ctx.fillRect(sx+11.5,sy+5+bob,2.5,1.5);
+    }else{
+      ctx.fillRect(sx+6,sy+4+bob,2.5,2.5);ctx.fillRect(sx+11.5,sy+4+bob,2.5,2.5);
+      ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fillRect(sx+6.5,sy+4.5+bob,1,1);ctx.fillRect(sx+12,sy+4.5+bob,1,1);
+    }
+    // Nose
+    ctx.fillStyle='#FF9090';ctx.beginPath();ctx.arc(sx+10,sy+7+bob,1.5,0,Math.PI*2);ctx.fill();
+    // Whiskers
+    ctx.strokeStyle='rgba(255,255,255,0.65)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(sx+3,sy+7+bob);ctx.lineTo(sx+8,sy+7.5+bob);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(sx+3,sy+9+bob);ctx.lineTo(sx+8,sy+8.5+bob);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(sx+17,sy+7+bob);ctx.lineTo(sx+12,sy+7.5+bob);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(sx+17,sy+9+bob);ctx.lineTo(sx+12,sy+8.5+bob);ctx.stroke();
+    ctx.lineWidth=1;
+    // Bow
+    ctx.fillStyle='#FF5090';
+    ctx.beginPath();ctx.moveTo(sx+16,sy-1+bob);ctx.lineTo(sx+14,sy+2+bob);ctx.lineTo(sx+16,sy+2+bob);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(sx+20,sy-1+bob);ctx.lineTo(sx+18,sy+2+bob);ctx.lineTo(sx+20,sy+2+bob);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#FF80B0';ctx.beginPath();ctx.arc(sx+18,sy+0.5+bob,2,0,Math.PI*2);ctx.fill();
+  }
+}
+
+// ── Robert Garbins — patrolling roomba ────────────────
+class RobertGarbins extends Entity{
+  constructor(tx,ty){
+    super(tx*TS+4,ty*TS+4,24,24);
+    this.patrolT=0;this.animT=0;
+    this.dlgCooldown=0;
+  }
+  get lines(){
+    const nearEnemy=G.enemies.some(e=>!e.dead&&this.dist(e)<7*TS);
+    return [
+      '"BZZZT. Vacuuming in progress. Oh! Hello. Robert Garbins here."',
+      '"I clean these same paths every single day. Nobody ever says thank you."',
+      nearEnemy?'"Heads up. There is a creature nearby. I bumped into it earlier. We were both surprised."':'"Area looks clear to me. Well. Clear-ish. Could really use a deeper sweep."',
+      '"BZZZT. Okay. Goodbye now. I have a lot of floor to cover."',
+    ];
+  }
+  update(){
+    this.animT++;this.patrolT++;
+    // Roam freely — changes direction periodically, covers whole map
+    if(this.patrolT%140===0){
+      const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+      const d=dirs[Math.floor(Math.random()*dirs.length)];
+      this._dx=d[0]*0.9;this._dy=d[1]*0.9;
+    }
+    if(!this._dx)this._dx=0.9;
+    this.tryMove(this._dx,this._dy);
+    // Bounce back toward map center if too far out
+    const homeX=24*TS,homeY=22*TS;
+    const dx=homeX-this.wx,dy=homeY-this.wy;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist>12*TS){this._dx=dx/dist*0.9;this._dy=dy/dist*0.9;}
+  }
+  draw(camX,camY){
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const spin=this.animT*0.06;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.18)';ctx.beginPath();ctx.ellipse(sx+12,sy+22,11,4,0,0,Math.PI*2);ctx.fill();
+    // Body disc
+    ctx.fillStyle='#DEDAD2';ctx.beginPath();ctx.arc(sx+12,sy+12,11,0,Math.PI*2);ctx.fill();
+    // Bumper ring (front arc)
+    ctx.strokeStyle='#A8A49C';ctx.lineWidth=2.5;
+    ctx.beginPath();ctx.arc(sx+12,sy+12,10,-0.9,0.9);ctx.stroke();
+    ctx.lineWidth=1;
+    // Top plate detail
+    ctx.fillStyle='#C8C4BC';ctx.beginPath();ctx.arc(sx+12,sy+12,7,0,Math.PI*2);ctx.fill();
+    // Center button
+    ctx.fillStyle='#484440';ctx.beginPath();ctx.arc(sx+12,sy+12,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#383430';ctx.beginPath();ctx.arc(sx+12,sy+12,3,0,Math.PI*2);ctx.fill();
+    // Spinning green indicator
+    ctx.fillStyle='#20E860';
+    ctx.beginPath();ctx.arc(sx+12+Math.cos(spin)*3.5,sy+12+Math.sin(spin)*3.5,1.5,0,Math.PI*2);ctx.fill();
+    // Side sensors
+    ctx.fillStyle='#707070';
+    ctx.beginPath();ctx.arc(sx+19,sy+9,2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(sx+21,sy+13,2,0,Math.PI*2);ctx.fill();
+    // Name label
+    ctx.fillStyle='rgba(60,56,50,0.7)';ctx.font=`500 6px ${F}`;ctx.textAlign='center';
+    ctx.fillText('ROBERT',sx+12,sy+26);
+  }
+}
+
+// ── Benny — deaf old black hound, 14 years ───────────
+class BennyDog extends Entity{
+  constructor(tx,ty){
+    super(tx*TS+4,ty*TS+4,24,24);
+    this.wanderT=0;this.restT=0;this.animT=0;
+    this.wdx=0;this.wdy=0;
+    this.treatT=0; // treat bubble timer
+    this._lines=[
+      '"................................treat?"',
+      '"I am 14 years old. I have earned a treat."',
+      '"Did someone say treat? I cannot hear. But I can smell."',
+      '"I was just sitting here. Do you have a treat though."',
+      '"TREAT."',
+    ];
+    this._li=0;
+  }
+  get lines(){
+    // rotate through lines each interaction
+    const l=[this._lines[this._li%this._lines.length],'(Benny wags his tail very slowly.)'];
+    this._li++;return l;
+  }
+  update(){
+    this.animT++;this.treatT--;
+    // Randomly decide to ask for treat (shows a thought bubble)
+    if(this.treatT<=-200&&Math.random()<0.002) this.treatT=180;
+    if(this.restT>0){this.restT--;return;}
+    // Very slow amble — lots of resting
+    if(Math.random()<0.012){this.restT=60+Math.random()*100;return;}
+    this.wanderT--;
+    if(this.wanderT<=0){
+      this.wanderT=50+Math.random()*60;
+      const a=Math.random()*Math.PI*2;
+      this.wdx=Math.cos(a)*0.55;this.wdy=Math.sin(a)*0.55;
+    }
+    this.tryMove(this.wdx,this.wdy);
+  }
+  draw(camX,camY){
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const resting=this.restT>0;
+    const bob=resting?0:Math.sin(this.animT*0.08)*1.2;
+    // Tail wag (very slow — old dog)
+    const tailWag=Math.sin(this.animT*0.05)*5;
+    ctx.strokeStyle='#1a1a1a';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(sx+20,sy+14+bob);
+    ctx.quadraticCurveTo(sx+26+tailWag,sy+10+bob,sx+24+tailWag,sy+6+bob);ctx.stroke();
+    ctx.lineWidth=1;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.beginPath();ctx.ellipse(sx+12,sy+22,11,4,0,0,Math.PI*2);ctx.fill();
+    // Body
+    ctx.fillStyle='#1e1e1e';ctx.beginPath();ctx.ellipse(sx+12,sy+14+bob,10,resting?7:9,0,0,Math.PI*2);ctx.fill();
+    // Head
+    ctx.fillStyle='#252525';ctx.beginPath();ctx.arc(sx+9,sy+6+bob,7,0,Math.PI*2);ctx.fill();
+    // Floppy ears — hang down either side
+    ctx.fillStyle='#181818';
+    ctx.beginPath();ctx.ellipse(sx+3,sy+9+bob,3,6,-.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(sx+15,sy+9+bob,3,6,.3,0,Math.PI*2);ctx.fill();
+    // Gray old muzzle
+    ctx.fillStyle='#888880';ctx.beginPath();ctx.ellipse(sx+9,sy+8+bob,4,3,0,0,Math.PI*2);ctx.fill();
+    // Nose
+    ctx.fillStyle='#111';ctx.beginPath();ctx.ellipse(sx+9,sy+7+bob,2.5,2,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.2)';ctx.beginPath();ctx.arc(sx+8,sy+6.5+bob,1,0,Math.PI*2);ctx.fill();
+    // Old tired eyes
+    ctx.fillStyle='#8B6914';
+    ctx.beginPath();ctx.arc(sx+6,sy+4+bob,2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(sx+12,sy+4+bob,2,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.3)';
+    ctx.fillRect(sx+6,sy+3.5+bob,1,1);ctx.fillRect(sx+12,sy+3.5+bob,1,1);
+    // Legs (only when moving)
+    if(!resting){
+      const lw=Math.sin(this.animT*0.15)*3;
+      ctx.fillStyle='#1e1e1e';
+      ctx.fillRect(sx+5,sy+20+bob,4,5+lw);ctx.fillRect(sx+14,sy+20+bob,4,5-lw);
+    }
+    // Treat thought bubble
+    if(this.treatT>0){
+      const a=Math.min(1,this.treatT/30);
+      ctx.globalAlpha=a;
+      ctx.fillStyle='rgba(255,255,255,0.92)';
+      rr(sx+18,sy-18,38,18,9);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,0.7)';
+      ctx.beginPath();ctx.arc(sx+20,sy-2,3,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(sx+17,sy+4,2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#444';ctx.font=`600 9px ${F}`;ctx.textAlign='center';
+      ctx.fillText('treat?',sx+37,sy-6);
+      ctx.globalAlpha=1;
+    }
+  }
+}
+// ── Steph — amazing loving stepmother, home base ──────
+class StephNPC extends Entity{
+  constructor(tx,ty){
+    super(tx*TS+5,ty*TS+5,22,22);
+    this._lines=[
+      '"Hey you two! I am so proud of you both. You are doing amazing."',
+      '"Dad went north and left a trail of glowing clues. Follow them and you will find him."',
+      '"You are brave and smart and you have each other. That is everything you need."',
+      '"Scoodles is a great guide. She knows this world well, for a cat."',
+      '"I believe in you. Both of you. Now go find your dad before he does something else silly."',
+      '"Press Q anytime and I am right here. Always."',
+    ];
+    this.met=false;
+  }
+  get lines(){
+    const rest=[...this._lines.slice(1)];
+    for(let i=rest.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}
+    return [this._lines[0],...rest.slice(0,3)];
+  }
+  draw(camX,camY){
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const bob=Math.sin(tick*0.04)*1.5;
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.15)';ctx.beginPath();ctx.ellipse(sx+11,sy+21,10,3.5,0,0,Math.PI*2);ctx.fill();
+    // Body — light blue chambray shirt
+    ctx.fillStyle='#B8CCE0';ctx.beginPath();ctx.arc(sx+11,sy+13+bob,10,0,Math.PI*2);ctx.fill();
+    // Head
+    ctx.fillStyle='#F0C090';ctx.beginPath();ctx.arc(sx+11,sy+5+bob,7,0,Math.PI*2);ctx.fill();
+    // Blonde wispy hair — updo with light highlight
+    ctx.fillStyle='#D8C048';ctx.beginPath();ctx.arc(sx+11,sy+2+bob,7,Math.PI,0);ctx.fill();
+    ctx.fillStyle='#EED858'; // highlight
+    ctx.beginPath();ctx.arc(sx+9,sy+1+bob,4,Math.PI,0);ctx.fill();
+    // Wispy side pieces
+    ctx.fillStyle='#D8C048';
+    ctx.fillRect(sx+1,sy+2+bob,3,6);ctx.fillRect(sx+18,sy+2+bob,3,6);
+    ctx.fillRect(sx+0,sy+5+bob,4,2);ctx.fillRect(sx+18,sy+5+bob,4,2); // small wisps
+    // ── Signature orange tortoiseshell sunglasses ──
+    ctx.fillStyle='#C04818';
+    ctx.fillRect(sx+2,sy+4+bob,7,5);   // left lens frame
+    ctx.fillRect(sx+12,sy+4+bob,7,5);  // right lens frame
+    ctx.fillRect(sx+9,sy+5+bob,3,2);   // bridge
+    ctx.fillRect(sx+1,sy+4+bob,2,3);   // left arm
+    ctx.fillRect(sx+18,sy+4+bob,2,3);  // right arm
+    // Dark tinted lenses
+    ctx.fillStyle='rgba(30,15,5,0.75)';
+    ctx.fillRect(sx+3,sy+5+bob,5,3);
+    ctx.fillRect(sx+13,sy+5+bob,5,3);
+    // Lens reflection (warm amber)
+    ctx.fillStyle='rgba(255,140,60,0.35)';
+    ctx.fillRect(sx+3,sy+5+bob,2,1);ctx.fillRect(sx+13,sy+5+bob,2,1);
+    // Big smile (she's laughing)
+    ctx.strokeStyle='rgba(160,70,50,0.75)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(sx+11,sy+8+bob,3.5,0.15,Math.PI-0.15);ctx.stroke();
+    ctx.lineWidth=1;
+    // Gold twisted hoop earrings — both sides
+    ctx.strokeStyle='#FFD060';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.arc(sx+2,sy+8+bob,2.5,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(sx+20,sy+8+bob,2.5,0,Math.PI*2);ctx.stroke();
+    ctx.lineWidth=1;
+    // Gold necklace chain
+    ctx.strokeStyle='rgba(255,208,60,0.7)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.arc(sx+11,sy+16+bob,4,Math.PI*1.15,Math.PI*1.85);ctx.stroke();
+    // Blue triangle pendant
+    ctx.fillStyle='#2850B0';
+    ctx.beginPath();ctx.moveTo(sx+9,sy+18+bob);ctx.lineTo(sx+11,sy+21+bob);ctx.lineTo(sx+13,sy+18+bob);ctx.fill();
+    ctx.strokeStyle='rgba(255,208,60,0.6)';ctx.lineWidth=0.8;
+    ctx.beginPath();ctx.moveTo(sx+9,sy+18+bob);ctx.lineTo(sx+11,sy+21+bob);ctx.lineTo(sx+13,sy+18+bob);ctx.closePath();ctx.stroke();
+    ctx.lineWidth=1;
+    // Simple name label
+    ctx.fillStyle='rgba(0,0,0,0.45)';ctx.font=`600 9px ${F}`;ctx.textAlign='center';
+    ctx.fillText('Steph',sx+11,sy-8);
+    // Warm glow when player nearby
+    const pl=G.player;
+    if(pl&&this.dist(pl)<80){
+      ctx.fillStyle='rgba(255,220,120,0.06)';
+      ctx.beginPath();ctx.arc(sx+11,sy+11+bob,40,0,Math.PI*2);ctx.fill();
+    }
+  }
+}
+
+// ── Steph — loving stepmom, home base ────────────────
+
+const K={left:false,right:false,up:false,down:false,atk:false,use:false,tab:false,snap:false,mute:false};
+const KP={};
+const KMAP={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',
+  KeyA:'left',KeyD:'right',KeyW:'up',KeyS:'down',Space:'atk',KeyE:'use',Enter:'use',Tab:'tab',KeyQ:'snap',KeyM:'mute'};
+document.addEventListener('keydown',e=>{
+  const k=KMAP[e.code];if(!k)return;
+  if(!K[k])KP[k]=true;K[k]=true;
+  if(!['KeyA','KeyD','KeyW','KeyS'].includes(e.code))e.preventDefault();
+});
+document.addEventListener('keyup',e=>{const k=KMAP[e.code];if(k)K[k]=false;});
+
+function wrapText(text,x,y,maxW,lh){
+  const words=text.split(' ');let line='';
+  for(const w of words){
+    const t=line+w+' ';
+    if(ctx.measureText(t).width>maxW&&line){ctx.fillText(line,x,y);line=w+' ';y+=lh;}else line=t;
+  }
+  if(line)ctx.fillText(line,x,y);
+}
+
+// ── Game ───────────────────────────────────────────────
+const G={
+  state:'title',score:0,camX:0,camY:0,selChar:0,shakeT:0,level:1,levelIntroTimer:0,
+  player:null,enemies:[],npcs:[],lore:[],fx:[],crackers:[],dad:null,scoodles:null,robert:null,benny:null,steph:null,dlg:null,loreDlg:null,foundDad:false,stephOpen:false,interactDelay:0,
+  completedLevel(){
+    if(this.level<7){this.loadLevel(this.level+1);}
+    else{this.state='gameend';}
+  },
+  loadLevel(n){
+    this.level=n;
+    resetWorld();
+    this.lore=[];this.enemies=[];this.npcs=[];this.crackers=[];this.fx=[];
+    this.dlg=null;this.loreDlg=null;this.foundDad=false;this.stephOpen=false;
+    this.dad=null;this.steph=null;this.scoodles=null;this.robert=null;this.benny=null;
+    if(this.player){this.player.hp=Math.min(this.player.maxHp,this.player.hp+2);this.player.inv=0;}
+    if(n===2)setupLevel2();
+    else if(n===3)setupLevel3();
+    else if(n===4)setupLevel4();
+    else if(n===5)setupLevel5();
+    else if(n===6)setupLevel6();
+    else if(n===7)setupLevel7();
+    this.interactDelay=30;
+    this.state='levelintro';
+    this.levelIntroTimer=180;
+    this.camX=this.player.wx-VW/2;this.camY=this.player.wy-VH/2;
+  },
+  getStephTip(){
+    if(this.foundDad) return '"You found Dad! I knew you could do it. I am so proud of you both."';
+    const cl=this.lore.filter(l=>l.collected).length;
+    const pl=this.player, tx=pl.tileX, ty=pl.tileY;
+    if(tx>42&&ty<10) return '"The cave is RIGHT THERE! Dad is inside. Go get him!"';
+    if(tx>37&&ty<18) return '"Head north through the ruins to reach the cave. Dad is up there waiting!"';
+    if(ty<12&&tx>20) return '"Keep heading north past the lake. The cave is at the top of the map."';
+    if(tx<16&&ty>7&&ty<22) return '"Beautiful lake! Dad went north from the village. Keep following his trail."';
+    if(cl===0) return '"Start by talking to people in the village! Walk up to someone and press E to chat."';
+    if(cl<3) return '"Nice work! Keep finding the glowing things Dad left. There are 8 total around the world."';
+    if(cl<6) return '"You are halfway there! Head north and east toward the ruins to find more clues."';
+    if(cl<8) return '"Almost done! The last clues are near the ruins and the cave entrance up north."';
+    return '"You found all the clues! The cave is in the northeast corner of the map. Go find Dad!"';
+  },
+  start(){
+    this.level=1;restoreLevel1();
+    this.score=0;this.fx=[];this.dlg=null;this.loreDlg=null;this.foundDad=false;
+    this.player=new Player();
+    this.player.char=this.selChar;
+    this.enemies=[
+      new Enemy(5,27,0),   // Briar — meadow (south of Scruggs)
+      new Enemy(23,5,3),   // Forest Sprite — north clearing
+      new Enemy(43,11,1),  // Stone Golem — ruins
+      new Enemy(51,17,2),  // Shadow Wisp — deep ruins
+      new Enemy(14,17,3),  // Forest Sprite — lake shore
+    ];
+    this.npcs=[
+      new NPC(14,14,'Elder Willow',C.elC,C.elH,[
+        '"You made it! Welcome to the lake. I have been here a very long time."',
+        '"A funny man came through recently on a small cart. He left candy everywhere he walked."',
+        '"He told me his kids would come find him. He seemed really sure about that."',
+        '"Look for the glowing things he left behind. They will show you the way!"',
+      ]),
+      new NPC(24,19,'Bramble',C.brNpc,C.brH,[
+        '"Hey! Welcome to Willowmere! We almost never get visitors out here."',
+        '"A man on a golf cart showed up yesterday and gave everyone free candy. Best day ever."',
+        '"He headed north and said his kids would follow the trail he left."',
+        '"That has to be you two. He would not stop talking about you!"',
+      ]),
+      new NPC(45,11,'Moona',C.moC,C.moH,[
+        '"Oh wow, you found me! I have been out here digging around for weeks."',
+        '"These ruins are really old. The symbols are so cool but I cannot figure them out yet."',
+        '"A man in a golf cart drove right past me into that cave up north."',
+        '"You are super close now. I can hear the cart in the mornings!"',
+      ]),
+    ];
+    this.dad=new DadNPC(47,4);
+    this.dad.lines=[
+      '"THERE you are! I have been having the best time up here."',
+      '"I drove the cart up the path, found this cave, and okay fine, I got a little lost."',
+      '"Did you find all the candy I left? Thatcher, the jawbreaker was just for you! Eloise, I left chocolate because I knew you would love it!"',
+      '"Okay let us go home. Does anyone want a peanut butter cracker? I have so many."',
+    ];
+    this.lore=[
+      new LoreItem(4,4,  'Lollipop',    '"I left this here for you two. The adventure starts now. Follow the trail!"',                         'lollipop'),
+      new LoreItem(9,14, 'Jawbreaker',  '"Buddy, found this near the island. These are the good ones. Getting warmer!"',                       'jawbreaker'),
+      new LoreItem(19,14,'Chocolate',   '"Eloisey Lemon Squeezy, spotted this and thought of you right away. Keep going!"',                     'chocolate'),
+      new LoreItem(31,22,'Gummy Bear',  '"Someone left gummies here. Keep going, you two!"',                                                    'gummy'),
+      new LoreItem(41,9, 'Hard Candy',  '"More candy for the road. You are getting really close now!"',                                         'hardcandy'),
+      new LoreItem(50,16,'Candy Corn',  '"Buddy, found this in the ruins. Totally your kind of thing."',                                        'candycorn'),
+      new LoreItem(6,35, 'Taffy',       '"Stop and smell the flowers. Also please eat the taffy. Love you both, Dad"',                          'taffy'),
+      new LoreItem(49,4, 'Gumball',     '"THIS IS WHERE IT GETS GOOD. Go in if you dare! I dared. It rules."',                                  'gumball'),
+    ];
+    this.crackers=[
+      new HealthPack(16,18),new HealthPack(13,17),
+      new HealthPack(33,34),new HealthPack(24,31),
+    ];
+    this.steph=new StephNPC(19,17);
+    this.scoodles=new ScoodlesNPC(27,21);
+    this.robert=new RobertGarbins(20,20);
+    this.benny=new BennyDog(22,23);
+    this.state='play';this.interactDelay=20;
+    this.camX=this.player.wx-VW/2;this.camY=this.player.wy-VH/2;
+    Music.start();
+  },
+  die(){if(this.state==='play')this.state='over';},
+  update(){
+    tick++;
+    if(this.state==='title'){
+      if(KP.left||KP.up) this.selChar=0;
+      if(KP.right||KP.down) this.selChar=1;
+      if(KP.use||KP.atk){Object.keys(KP).forEach(k=>delete KP[k]);this.start();}
+      Object.keys(KP).forEach(k=>delete KP[k]);return;
+    }
+    if(this.state==='over'){if(KP.use||KP.atk)this.state='title';Object.keys(KP).forEach(k=>delete KP[k]);return;}
+    if(this.state==='levelintro'){
+      if(--this.levelIntroTimer<=0||KP.use||KP.atk){this.state='play';this.interactDelay=20;}
+      Object.keys(KP).forEach(k=>delete KP[k]);return;
+    }
+    if(this.state==='levelcomplete'){
+      if(KP.use||KP.atk)this.completedLevel();
+      Object.keys(KP).forEach(k=>delete KP[k]);return;
+    }
+    if(this.state==='gameend'){
+      if(KP.use||KP.atk){this.state='title';this.level=1;}
+      Object.keys(KP).forEach(k=>delete KP[k]);return;
+    }
+    if(this.state==='dialogue'){
+      if(KP.use){this.dlg.idx++;if(this.dlg.idx>=this.dlg.lines.length){
+        const onDone=this.dlg.onDone;this.dlg=null;
+        if(onDone==='levelcomplete'){this.state='levelcomplete';}
+        else if(onDone==='gameend'){this.state='gameend';}
+        else{this.state='play';}
+      }}
+      Object.keys(KP).forEach(k=>delete KP[k]);return;
+    }
+    if(this.state==='lore'){
+      if(KP.use){this.loreDlg=null;this.state='play';}
+      Object.keys(KP).forEach(k=>delete KP[k]);return;
+    }
+    const pl=this.player;
+    // Q — toggle Steph tip popup from anywhere during play
+    if(KP.snap) this.stephOpen=!this.stephOpen;
+    if(this.stephOpen&&KP.use) this.stephOpen=false;
+    if(KP.mute) Music.toggle();
+    if(KP.tab){pl.char=1-pl.char;this.fx.push({x:pl.cx,y:pl.cy-26,txt:pl.char===0?'Scout!':'Fox!',life:48,col:'#FFFFFF'});}
+    if(KP.atk)pl.attack();
+    if(this.interactDelay>0){this.interactDelay--;}
+    if(pl.atkT===18){
+      const r=50,ax=pl.cx+pl.facing.x*r*0.4,ay=pl.cy+pl.facing.y*r*0.4;
+      this.enemies.forEach(e=>{if(!e.dead){const dx=e.cx-ax,dy=e.cy-ay;if(dx*dx+dy*dy<r*r)e.hit(pl);}});
+    }
+    if(KP.use&&this.interactDelay<=0){
+      let acted=false;
+      if(!acted&&pl.dist(this.steph)<56){this.dlg={speaker:'Steph',lines:this.steph.lines,idx:0};this.state='dialogue';acted=true;}
+      // Benny
+      if(!acted&&pl.dist(this.benny)<52){this.dlg={speaker:'Benny',lines:this.benny.lines,idx:0};this.state='dialogue';acted=true;}
+      // Scoodles
+      if(!acted&&pl.dist(this.scoodles)<52){this.dlg={speaker:'Scoodles',lines:this.scoodles.lines,idx:0};this.state='dialogue';acted=true;}
+      // Robert
+      if(!acted&&pl.dist(this.robert)<52){this.dlg={speaker:'Robert Garbins',lines:this.robert.lines,idx:0};this.state='dialogue';acted=true;}
+      // Dad
+      if(this.dad&&!acted&&pl.dist(this.dad)<60){
+        if(!this.dad.found){this.dad.found=true;this.score+=500;this.fx.push({x:pl.cx,y:pl.cy-30,txt:'YOU FOUND DAD! +500',life:90,col:'#FFD060'});Music.sfx.dadFound();}
+        this.dlg={speaker:'Dad',lines:this.dad.lines,idx:0,onDone:this.level===7?'gameend':'levelcomplete'};this.state='dialogue';acted=true;
+      }
+      for(const n of this.npcs){if(!acted&&pl.dist(n)<56){this.dlg={speaker:n.name,lines:n.lines,idx:0};this.state='dialogue';acted=true;break;}}
+      if(!acted)for(const l of this.lore)if(!l.collected&&pl.dist(l)<54){
+        l.collected=true;
+        const val=CANDY_VALUE[l.kind]||50;
+        this.score+=val;
+        this.loreDlg={name:l.name,text:l.text};this.state='lore';acted=true;
+        this.fx.push({x:l.cx,y:l.cy-12,txt:'+'+val,life:50,col:C.gold});
+        Music.sfx.collect();
+        for(let i=0;i<10;i++){const a=(i/10)*Math.PI*2;G.fx.push({type:'spark',x:l.cx,y:l.cy,vx:Math.cos(a)*2.2,vy:Math.sin(a)*2.2-1,life:22,ml:22,col:['#FFD060','#FFA020','#FFFFFF'][i%3]});}
+        break;
+      }
+    }
+    this.crackers.forEach(cr=>{
+      if(!cr.collected&&pl.dist(cr)<36&&pl.hp<pl.maxHp){
+        cr.collected=true;pl.hp=Math.min(pl.maxHp,pl.hp+1);
+        this.fx.push({x:cr.cx,y:cr.cy-10,txt:'♥ +1',life:48,col:'#FF8080'});
+      }
+    });
+    pl.update();
+    this.enemies.forEach(e=>e.update(pl));
+    if(this.level>=2&&this.level<=5&&this.lore.length>0&&this.lore.every(l=>l.collected)&&this.state==='play')
+      this.state='levelcomplete';
+    this.lore.forEach(l=>l.update());
+    this.crackers.forEach(cr=>cr.update());
+    if(this.robert)this.robert.update();
+    if(this.scoodles)this.scoodles.update(pl);
+    if(this.benny)this.benny.update();
+    this.fx=this.fx.filter(f=>f.life>0);
+    this.fx.forEach(f=>{
+      f.life--;
+      if(f.type==='dust'||f.type==='spark'){f.x+=f.vx;f.y+=f.vy;if(f.type==='dust')f.vy+=0.06;}
+      else f.y-=0.8;
+    });
+    const tcx=pl.wx-VW/2+pl.w/2,tcy=pl.wy-VH/2+pl.h/2;
+    this.camX+=(tcx-this.camX)*0.09;this.camY+=(tcy-this.camY)*0.09;
+    this.camX=Math.max(0,Math.min(MW*TS-VW,this.camX));
+    this.camY=Math.max(0,Math.min(MH*TS-VH,this.camY));
+    Object.keys(KP).forEach(k=>delete KP[k]);
+  },
+  draw(){
+    ctx.fillStyle='#0d0b08';ctx.fillRect(0,0,VW,VH);
+    if(this.state==='title'){drawTitle();return;}
+    // Screen shake
+    const shk=this.shakeT>0?5:0;if(this.shakeT>0)this.shakeT--;
+    const cx=this.camX+(Math.random()-0.5)*shk;
+    const cy=this.camY+(Math.random()-0.5)*shk;
+    const tx0=Math.max(0,Math.floor(cx/TS)-1),ty0=Math.max(0,Math.floor(cy/TS)-1);
+    const tx1=Math.min(MW-1,tx0+Math.ceil(VW/TS)+2),ty1=Math.min(MH-1,ty0+Math.ceil(VH/TS)+2);
+    for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++)drawTile(tx,ty,tx*TS-cx,ty*TS-cy);
+    const ents=[this.player,...this.enemies,...this.npcs,...this.lore,...this.crackers,...[this.dad,this.scoodles,this.robert,this.benny,this.steph].filter(Boolean)];
+    ents.sort((a,b)=>a.cy-b.cy);
+    for(const e of ents)e.draw(cx,cy);
+    // Particles
+    ctx.font=`700 13px ${F}`;ctx.textAlign='center';
+    this.fx.forEach(f=>{
+      if(f.type==='dust'){
+        ctx.globalAlpha=(f.life/f.ml)*0.45;
+        ctx.fillStyle='#c8b890';
+        ctx.beginPath();ctx.arc(f.x-cx,f.y-cy,3*(f.life/f.ml),0,Math.PI*2);ctx.fill();
+      }else if(f.type==='spark'){
+        ctx.globalAlpha=f.life/f.ml;
+        ctx.fillStyle=f.col;
+        ctx.beginPath();ctx.arc(f.x-cx,f.y-cy,2.5*(f.life/f.ml),0,Math.PI*2);ctx.fill();
+      }else{
+        ctx.globalAlpha=Math.min(1,f.life/30);
+        ctx.fillStyle=f.col;ctx.fillText(f.txt,f.x-cx,f.y-cy);
+      }
+    });
+    ctx.globalAlpha=1;
+    // Proximity prompts
+    if(this.state==='play'){
+      const pl2=this.player;
+      const inter=[...this.npcs,...[this.dad,this.scoodles,this.robert,this.benny].filter(Boolean),...this.lore.filter(l=>!l.collected)];
+      inter.forEach(e=>{
+        if(!e||pl2.dist(e)>54)return;
+        const ex=e.cx-cx,ey=e.wy-cy-16;
+        ctx.fillStyle='rgba(255,255,255,0.95)';
+        rr(ex-11,ey-15,22,17,5);ctx.fill();
+        ctx.strokeStyle='rgba(0,0,0,0.1)';ctx.lineWidth=1;rr(ex-11,ey-15,22,17,5);ctx.stroke();
+        ctx.fillStyle='rgba(255,255,255,0.95)';
+        ctx.beginPath();ctx.moveTo(ex-4,ey+2);ctx.lineTo(ex,ey+8);ctx.lineTo(ex+4,ey+2);ctx.fill();
+        ctx.fillStyle='#444';ctx.font=`700 11px ${F}`;ctx.textAlign='center';
+        ctx.fillText('E',ex,ey-3);
+      });
+    }
+    // Vignette
+    const vig=ctx.createRadialGradient(VW/2,VH/2,VH*0.3,VW/2,VH/2,VH*0.78);
+    vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,0.42)');
+    ctx.fillStyle=vig;ctx.fillRect(0,0,VW,VH);
+    // Ambient warm lighting — sunlight from upper left
+    const amb=ctx.createRadialGradient(VW*.25,VH*.2,0,VW*.25,VH*.2,VW*.9);
+    amb.addColorStop(0,'rgba(255,240,160,0.05)');amb.addColorStop(1,'rgba(10,5,20,0.18)');
+    ctx.fillStyle=amb;ctx.fillRect(0,0,VW,VH);
+    drawHUD();
+    if(this.state==='dialogue'&&this.dlg)drawDlg(this.dlg);
+    if(this.state==='lore'&&this.loreDlg)drawLoreDlg(this.loreDlg);
+    if(this.state==='over')drawOver();
+    if(this.stephOpen&&this.steph)drawStephPopup(this.getStephTip());
+    // Level atmospheric overlays
+    if(this.level===2){
+      ctx.fillStyle='rgba(70,90,130,0.16)';ctx.fillRect(0,0,VW,VH);
+      const ft=tick*0.007;
+      for(let i=0;i<3;i++){
+        const gx=VW*(0.2+i*0.3)+Math.sin(ft+i*1.4)*80,gy=VH*0.5+Math.cos(ft*0.9+i*1.1)*55;
+        const fg=ctx.createRadialGradient(gx,gy,0,gx,gy,130);
+        fg.addColorStop(0,'rgba(130,160,220,0.1)');fg.addColorStop(1,'rgba(70,90,130,0)');
+        ctx.fillStyle=fg;ctx.fillRect(0,0,VW,VH);
+      }
+    }else if(this.level===5){ctx.fillStyle='rgba(255,190,80,0.07)';ctx.fillRect(0,0,VW,VH);}
+    else if(this.level===7){ctx.fillStyle='rgba(255,140,40,0.1)';ctx.fillRect(0,0,VW,VH);}
+    // Level intro overlay (drawn on top of world)
+    if(this.state==='levelintro'){
+      const a=Math.min(1,this.levelIntroTimer/40);
+      ctx.fillStyle=`rgba(0,0,0,${0.78*a})`;ctx.fillRect(0,0,VW,VH);
+      const lvlNames=['','Bridgeport','Jelly Bones Ghost Boy','Richardson Elementary','The Dojo','Purple Park','Haystack Rock',"Casey's"];
+      ctx.globalAlpha=a;
+      ctx.fillStyle='#FFD060';ctx.font=`700 13px ${F}`;ctx.textAlign='center';
+      ctx.fillText('Level '+this.level,VW/2,VH/2-24);
+      ctx.fillStyle='#FFFFFF';ctx.font=`700 26px ${F}`;
+      ctx.fillText(lvlNames[this.level]||'',VW/2,VH/2+6);
+      ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font=`400 10px ${F}`;
+      ctx.fillText('Press E to begin',VW/2,VH/2+32);
+      ctx.globalAlpha=1;
+    }
+    // Level complete overlay
+    if(this.state==='levelcomplete'){
+      ctx.fillStyle='rgba(0,0,0,0.8)';ctx.fillRect(0,0,VW,VH);
+      ctx.fillStyle='#FFD060';ctx.font=`700 28px ${F}`;ctx.textAlign='center';
+      ctx.fillText('Level Complete!',VW/2,VH/2-16);
+      ctx.fillStyle='rgba(255,255,255,0.75)';ctx.font=`400 12px ${F}`;
+      ctx.fillText('Press E to continue',VW/2,VH/2+18);
+    }
+    // Game end screen
+    if(this.state==='gameend'){
+      ctx.fillStyle='#110820';ctx.fillRect(0,0,VW,VH);
+      for(let i=0;i<50;i++){
+        const sx=(Math.sin(i*7.3)*0.5+0.5)*VW,sy=(Math.cos(i*5.7)*0.5+0.5)*VH;
+        ctx.fillStyle=`rgba(255,255,255,${0.35+Math.sin(tick*0.04+i)*0.2})`;
+        ctx.beginPath();ctx.arc(sx,sy,0.8+Math.sin(tick*0.05+i)*0.5,0,Math.PI*2);ctx.fill();
+      }
+      ctx.fillStyle='#FFD060';ctx.font=`700 30px ${F}`;ctx.textAlign='center';
+      ctx.fillText('The End',VW/2,VH/2-52);
+      ctx.fillStyle='rgba(255,255,255,0.92)';ctx.font=`600 15px ${F}`;
+      ctx.fillText('Kinder egg. Apple juice.',VW/2,VH/2-12);
+      ctx.fillText('Same spot. Every time.',VW/2,VH/2+14);
+      ctx.fillStyle='rgba(255,210,100,0.6)';ctx.font=`400 12px ${F}`;
+      ctx.fillText('Made with love from Dad, for Eloise and Thatcher ♥',VW/2,VH/2+50);
+      ctx.fillStyle='rgba(255,255,255,0.28)';ctx.font=`400 10px ${F}`;
+      ctx.fillText('Press E to play again',VW/2,VH/2+82);
+    }
+  }
+};
+
+const F="'Poppins',system-ui,sans-serif"; // UI font
+
+function rr(x,y,w,h,r){ // rounded rect path helper
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+}
+
+function drawCharIcon(cx,cy,isScout,s){
+  s=s||1;
+  const topC=isScout?C.scTop:C.fxTop,botC=isScout?C.scBot:C.fxBot,hairC=isScout?C.scHair:C.fxHair;
+  ctx.fillStyle='rgba(0,0,0,0.2)';ctx.beginPath();ctx.ellipse(cx,cy+14*s,8*s,3*s,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=botC;ctx.fillRect(cx-6*s,cy+4*s,12*s,8*s);
+  ctx.fillStyle=topC;ctx.fillRect(cx-6*s,cy+3*s,12*s,5*s);
+  ctx.fillStyle=C.skin;ctx.beginPath();ctx.arc(cx,cy-1*s,6*s,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=hairC;ctx.beginPath();ctx.arc(cx,cy-4*s,6*s,Math.PI,0);ctx.fill();
+  if(isScout){
+    // Side tufts
+    ctx.fillRect(cx-7*s,cy-5*s,2*s,4*s);ctx.fillRect(cx+5*s,cy-5*s,2*s,4*s);
+    // Swoop across forehead
+    ctx.beginPath();
+    ctx.moveTo(cx-7*s,cy-3*s);
+    ctx.bezierCurveTo(cx-2*s,cy-10*s,cx+6*s,cy-8*s,cx+9*s,cy-3*s);
+    ctx.bezierCurveTo(cx+6*s,cy-6*s,cx-2*s,cy-7*s,cx-7*s,cy-1*s);
+    ctx.closePath();ctx.fill();
+    // Gold hoop earring — small and subtle
+    ctx.strokeStyle='#FFD060';ctx.lineWidth=1.1*s;
+    ctx.beginPath();ctx.arc(cx+8*s,cy+s,1.6*s,0,Math.PI*2);ctx.stroke();
+    ctx.lineWidth=1;
+  }else{
+    // Fox: medium wavy hair — not too long, just past where ears would be
+    ctx.fillStyle=hairC;
+    ctx.beginPath();ctx.arc(cx,cy-4*s,7.5*s,Math.PI,0);ctx.fill();
+    // Short sides at ear level with a small wave
+    ctx.fillRect(cx-8*s,cy-4*s,4*s,6*s);
+    ctx.fillRect(cx+4*s,cy-4*s,4*s,6*s);
+    ctx.fillRect(cx-9*s,cy+1*s,5*s,2*s);
+    ctx.fillRect(cx+4*s,cy+1*s,5*s,2*s);
+    // Wavy messy top
+    ctx.fillRect(cx-4*s,cy-10*s,4*s,5*s);
+    ctx.fillRect(cx+0*s,cy-11*s,4*s,5*s);
+    ctx.fillRect(cx+3*s,cy-9*s,3*s,4*s);
+  }
+  ctx.fillStyle='#1A0C04';ctx.fillRect(cx-2.5*s,cy+0.5*s,1.5*s,1.5*s);ctx.fillRect(cx+s,cy+0.5*s,1.5*s,1.5*s);
+}
+
+function drawHUD(){
+  const pl=G.player;
+  // Top bar
+  ctx.fillStyle='rgba(10,8,20,0.92)';ctx.fillRect(0,0,VW,42);
+  ctx.fillStyle='rgba(139,92,246,0.3)';ctx.fillRect(0,41,VW,1);
+
+  // Character avatar circle
+  const acol=pl.char===0?'#34d399':'#f59e0b';
+  ctx.fillStyle=acol;ctx.beginPath();ctx.arc(24,21,17,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=pl.char===0?C.scTop:C.fxTop;ctx.beginPath();ctx.arc(24,21,15,0,Math.PI*2);ctx.fill();
+  drawCharIcon(24,20,pl.char===0,0.88);
+
+  // Character name + HP
+  ctx.fillStyle=acol;ctx.font=`700 13px ${F}`;ctx.textAlign='left';
+  ctx.fillText(pl.char===0?'Scout':'Fox',46,16);
+  ctx.fillStyle='rgba(255,255,255,0.35)';ctx.font=`400 10px ${F}`;
+  ctx.fillText(pl.char===0?'Eloise':'Thatcher',46,28);
+
+  // Heart HP pips
+  for(let i=0;i<pl.maxHp;i++){
+    const hx=100+i*20;
+    ctx.fillStyle=i<pl.hp?'#ef4444':'rgba(255,255,255,0.12)';
+    ctx.beginPath();ctx.arc(hx+3,22,4,Math.PI,0);ctx.arc(hx+9,22,4,Math.PI,0);ctx.lineTo(hx+6,30);ctx.closePath();ctx.fill();
+  }
+
+  // Score - centered pill
+  ctx.fillStyle='rgba(255,255,255,0.06)';rr(VW/2-44,6,88,30,15);ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.12)';rr(VW/2-44,6,88,30,15);ctx.stroke();ctx.lineWidth=1;
+  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font=`600 9px ${F}`;ctx.textAlign='center';
+  ctx.fillText('SCORE',VW/2,18);
+  ctx.fillStyle='#fff';ctx.font=`800 15px ${F}`;
+  ctx.fillText(String(G.score).padStart(5,'0'),VW/2,34);
+
+  // Clues + Dad status - right side
+  const lc=G.lore.filter(l=>l.collected).length;
+  ctx.textAlign='right';
+  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font=`600 11px ${F}`;
+  ctx.fillText(`Clues  ${lc} / ${G.lore.length}`,VW-12,18);
+  if(G.foundDad){
+    ctx.fillStyle='#22c55e';ctx.font=`700 11px ${F}`;
+    ctx.fillText('DAD FOUND  ♥',VW-12,32);
+  }else{
+    ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font=`400 10px ${F}`;
+    ctx.fillText(`Q·Steph  TAB·E·SPACE  M:${typeof Music!=='undefined'&&Music.muted?'off':'♪'}`,VW-12,32);
+  }
+}
+
+function drawDlg(dlg){
+  const dh=110,dy=VH-dh-8;
+  // Card
+  ctx.fillStyle='rgba(12,10,24,0.97)';rr(8,dy,VW-16,dh,14);ctx.fill();
+  ctx.strokeStyle='rgba(139,92,246,0.4)';ctx.lineWidth=1.5;rr(8,dy,VW-16,dh,14);ctx.stroke();
+  // Speaker badge
+  const speakerCol={'Scoodles':'#e07820','Robert Garbins':'#20a860','Dad':'#f59e0b','Benny':'#7c5c28','Steph':'#d05080'}[dlg.speaker]||'#7c3aed';
+  ctx.fillStyle=speakerCol;rr(20,dy-13,dlg.speaker.length*9+16,22,11);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font=`700 12px ${F}`;ctx.textAlign='left';ctx.fillText(dlg.speaker,28,dy-1);
+  // Text
+  ctx.fillStyle='rgba(255,255,255,0.88)';ctx.font=`400 15px ${F}`;
+  wrapText(dlg.lines[dlg.idx]||'',24,dy+32,VW-48,24);
+  // Continue hint
+  if(Math.floor(tick/18)%2===0){
+    ctx.fillStyle='rgba(139,92,246,0.5)';rr(VW-110,dy+dh-22,90,16,8);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font=`600 10px ${F}`;ctx.textAlign='right';
+    ctx.fillText('E: continue',VW-18,dy+dh-11);
+  }
+}
+
+function drawLoreDlg(l){
+  const dh=130,dy=VH-dh-8;
+  ctx.fillStyle='rgba(10,8,28,0.98)';rr(8,dy,VW-16,dh,14);ctx.fill();
+  ctx.strokeStyle='rgba(168,85,247,0.5)';ctx.lineWidth=1.5;rr(8,dy,VW-16,dh,14);ctx.stroke();
+  // Badge
+  ctx.fillStyle='#7c3aed';rr(20,dy-13,88,22,11);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font=`700 11px ${F}`;ctx.textAlign='left';ctx.fillText('CLUE FOUND',28,dy-1);
+  // Name
+  ctx.fillStyle='#c084fc';ctx.font=`700 13px ${F}`;ctx.fillText(l.name,24,dy+28);
+  ctx.fillStyle='rgba(255,255,255,0.8)';ctx.font=`400 italic 14px ${F}`;
+  wrapText(l.text,24,dy+50,VW-48,24);
+  if(Math.floor(tick/18)%2===0){
+    ctx.fillStyle='rgba(168,85,247,0.5)';rr(VW-86,dy+dh-22,66,16,8);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font=`600 10px ${F}`;ctx.textAlign='right';
+    ctx.fillText('E: close',VW-18,dy+dh-11);
+  }
+}
+
+function drawOver(){
+  ctx.fillStyle='rgba(0,0,0,0.75)';ctx.fillRect(0,0,VW,VH);
+  ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,0.06)';rr(VW/2-180,VH/2-80,360,150,20);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1.5;rr(VW/2-180,VH/2-80,360,150,20);ctx.stroke();
+  ctx.font=`900 56px ${F}`;ctx.fillStyle='#ffffff';ctx.fillText('Oof!',VW/2,VH/2-18);
+  ctx.font=`400 16px ${F}`;ctx.fillStyle='rgba(255,255,255,0.55)';
+  ctx.fillText('Scoodles saw that and is shaking her head.',VW/2,VH/2+18);
+  ctx.font=`400 14px ${F}`;ctx.fillStyle='rgba(255,255,255,0.35)';
+  ctx.fillText(`Score: ${G.score}`,VW/2,VH/2+44);
+  ctx.fillStyle='rgba(255,255,255,0.9)';rr(VW/2-70,VH/2+58,140,34,17);ctx.fill();
+  ctx.fillStyle='#111';ctx.font=`600 14px ${F}`;ctx.fillText('Try Again',VW/2,VH/2+80);
+}
+
+function drawStephPopup(tip){
+  // Full overlay tint
+  ctx.fillStyle='rgba(0,0,0,0.45)';ctx.fillRect(0,0,VW,VH);
+  // Card
+  const dh=130,dy=VH/2-dh/2;
+  ctx.fillStyle='rgba(255,245,248,0.98)';rr(40,dy,VW-80,dh,18);ctx.fill();
+  ctx.strokeStyle='rgba(208,80,128,0.3)';ctx.lineWidth=2;rr(40,dy,VW-80,dh,18);ctx.stroke();
+  // Steph portrait circle
+  const px=40+50,py=dy+dh/2;
+  ctx.fillStyle='rgba(208,80,128,0.12)';ctx.beginPath();ctx.arc(px,py,34,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(208,80,128,0.4)';ctx.lineWidth=2;ctx.beginPath();ctx.arc(px,py,34,0,Math.PI*2);ctx.stroke();
+  // Draw mini Steph (reuse her NPC draw logic inline)
+  const sx=px-11,sy=py-14;
+  const bob=Math.sin(tick*0.04)*1;
+  ctx.fillStyle='rgba(0,0,0,0.1)';ctx.beginPath();ctx.ellipse(sx+11,sy+21,9,3,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#B8CCE0';ctx.beginPath();ctx.arc(sx+11,sy+13+bob,9,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#F0C090';ctx.beginPath();ctx.arc(sx+11,sy+5+bob,7,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#D8C048';ctx.beginPath();ctx.arc(sx+11,sy+2+bob,7.5,Math.PI,0);ctx.fill();
+  ctx.fillStyle='#EED858';ctx.beginPath();ctx.arc(sx+9,sy+1+bob,4,Math.PI,0);ctx.fill();
+  ctx.fillStyle='#D8C048';ctx.fillRect(sx+1,sy+2+bob,3,6);ctx.fillRect(sx+18,sy+2+bob,3,6);
+  ctx.fillStyle='#C04818';
+  ctx.fillRect(sx+2,sy+4+bob,7,5);ctx.fillRect(sx+12,sy+4+bob,7,5);ctx.fillRect(sx+9,sy+5+bob,3,2);
+  ctx.fillStyle='rgba(30,15,5,0.75)';ctx.fillRect(sx+3,sy+5+bob,5,3);ctx.fillRect(sx+13,sy+5+bob,5,3);
+  ctx.strokeStyle='rgba(160,70,50,0.75)';ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.arc(sx+11,sy+8+bob,3.5,0.15,Math.PI-0.15);ctx.stroke();ctx.lineWidth=1;
+  // Speaker label
+  ctx.fillStyle='#d05080';rr(px-22,dy+8,44,18,9);ctx.fill();
+  ctx.fillStyle='#fff';ctx.font=`700 11px ${F}`;ctx.textAlign='center';ctx.fillText('Steph',px,dy+21);
+  // Tip text
+  ctx.fillStyle='#1a1010';ctx.font=`500 15px ${F}`;ctx.textAlign='left';
+  wrapText(tip,104+40,dy+38,VW-80-130,24);
+  // Dismiss hint
+  ctx.fillStyle='rgba(0,0,0,0.25)';ctx.font=`400 11px ${F}`;ctx.textAlign='center';
+  ctx.fillText('Press Q or E to close',VW/2,dy+dh-10);
+}
+
+function drawTitle(){
+  // Light background
+  ctx.fillStyle='#f5f3ef';ctx.fillRect(0,0,VW,VH);
+
+  // Title — single line, large slab serif
+  ctx.textAlign='center';
+  ctx.fillStyle='#1a1814';
+  ctx.font=`700 42px ${F}`;
+  ctx.fillText('The Adventures of Scout & Fox',VW/2,VH/2-130);
+
+  // Hairline rule
+  ctx.fillStyle='rgba(0,0,0,0.1)';
+  ctx.fillRect(VW/2-220,VH/2-112,440,1);
+
+  // Characters — sprites + name above, centered
+  const lx=VW/2-72, rx=VW/2+72, sy2=VH/2+20;
+  for(let i=0;i<2;i++){
+    const x=i===0?lx:rx, sel=G.selChar===i;
+    const accent=i===0?'#34d399':'#f59e0b';
+    // Name above sprite
+    ctx.font=`600 15px ${F}`;ctx.textAlign='center';
+    ctx.fillStyle=sel?'#1a1814':'rgba(0,0,0,0.35)';
+    ctx.fillText(i===0?'Scout':'Fox',x,sy2-52);
+    // Selection ring
+    ctx.strokeStyle=sel?accent:'rgba(0,0,0,0.07)';
+    ctx.lineWidth=sel?2:1;
+    ctx.beginPath();ctx.arc(x,sy2,38,0,Math.PI*2);ctx.stroke();
+    if(sel){
+      ctx.fillStyle=i===0?'rgba(52,211,153,0.1)':'rgba(245,158,11,0.1)';
+      ctx.beginPath();ctx.arc(x,sy2,38,0,Math.PI*2);ctx.fill();
+    }
+    drawCharIcon(x,sy2-2,i===0,2.5);
+  }
+
+  // Minimal arrow hint
+  ctx.font=`400 12px ${F}`;ctx.fillStyle='rgba(0,0,0,0.22)';ctx.textAlign='center';
+  ctx.fillText('←  →',VW/2,sy2+60);
+
+  // Press Enter — static, no animation
+  ctx.font=`500 16px ${F}`;ctx.fillStyle='#111111';
+  ctx.fillText('Press Enter to Play',VW/2,VH-46);
+
+  // Footer
+  ctx.font=`400 12px ${F}`;ctx.fillStyle='rgba(0,0,0,0.45)';
+  ctx.fillText('Made with love from Dad, for Eloise and Thatcher  ♥',VW/2,VH-18);
+}
+
+
+// ── Jelly Bones Ghost Boy ─────────────────────────────
+class JellyBonesGhost extends Entity{
+  constructor(tx,ty){
+    super(tx*TS+5,ty*TS+5,22,22);
+    this.t=0;this.name='Jelly Bones';
+    this.lines=[
+      '"BOO! ...just kidding. Hi! I am Jelly Bones Ghost Boy. Welcome to my trail."',
+      '"I have been haunting these woods forever. Very peaceful. Lots of good mushrooms."',
+      '"Your dad came through here. Gave me a piece of candy and kept going. Solid guy."',
+      '"You found all my mushrooms! That is the nicest thing anyone has done up here."',
+    ];
+  }
+  get cx(){return this.wx+11;}get cy(){return this.wy+11;}
+  dist(e){const dx=this.cx-e.cx,dy=this.cy-e.cy;return Math.sqrt(dx*dx+dy*dy);}
+  update(){this.t+=0.04;}
+  draw(camX,camY){
+    const sx=this.wx-camX,sy=this.wy-camY,bob=Math.sin(this.t)*5;
+    ctx.globalAlpha=0.85;
+    ctx.fillStyle='rgba(160,200,255,0.22)';ctx.beginPath();ctx.arc(sx+11,sy+9+bob,19,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(218,232,255,0.95)';
+    ctx.beginPath();ctx.arc(sx+11,sy+6+bob,10,Math.PI,0);
+    ctx.lineTo(sx+21,sy+16+bob);
+    ctx.quadraticCurveTo(sx+18,sy+13+bob,sx+16,sy+16+bob);
+    ctx.quadraticCurveTo(sx+13,sy+12+bob,sx+11,sy+16+bob);
+    ctx.quadraticCurveTo(sx+9, sy+12+bob,sx+6, sy+16+bob);
+    ctx.quadraticCurveTo(sx+4, sy+13+bob,sx+1, sy+16+bob);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(70,110,200,0.7)';
+    ctx.beginPath();ctx.arc(sx+8, sy+6+bob,2.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(sx+14,sy+6+bob,2.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(180,210,255,0.85)';ctx.font=`600 8px ${F}`;ctx.textAlign='center';
+    ctx.fillText('Jelly Bones',sx+11,sy-5+bob);
+    ctx.globalAlpha=1;
+  }
+}
+
+// ── Level 2: Jelly Bones Ghost Boy Hike ───────────────
+function setupLevel2(){
+  hln(0,0,MW,TREE);hln(0,MH-1,MW,TREE);vln(0,0,MH,TREE);vln(MW-1,0,MH,TREE);
+  fillR(1,1,MW-2,MH-2,TREE);
+  // Winding trail S→N
+  const pts=[[27,42],[26,40],[24,38],[22,36],[20,33],[18,30],[16,27],[15,24],[14,21],[13,18],[14,15],[16,12],[18,9],[21,6],[25,3],[28,2]];
+  for(let i=0;i<pts.length-1;i++){
+    const[x1,y1]=pts[i],[x2,y2]=pts[i+1];
+    const steps=Math.max(Math.abs(x2-x1),Math.abs(y2-y1));
+    for(let s=0;s<=steps;s++){
+      const t=steps?s/steps:0;
+      fillR(Math.round(x1+(x2-x1)*t)-1,Math.round(y1+(y2-y1)*t)-1,4,3,PATH);
+    }
+  }
+  fillR(11,20,10,6,GRASS);fillR(10,12,9,4,FLOWER);fillR(23,2,12,5,GRASS);
+  // Creek
+  for(let x=5;x<MW-5;x++){if(world[27][x]!==PATH)setT(x,27,WATER);if(world[26][x]!==PATH)setT(x,26,WATER);}
+  fillR(10,25,6,4,TALL);fillR(20,17,6,4,TALL);
+  G.lore=[
+    new LoreItem(20,32,'Blue Mushroom',   '"Jelly Bones says these grow where ghost footsteps land. Glows blue!"','gummy'),
+    new LoreItem(14,22,'Spotted Mushroom','"Polka dots. Jelly Bones says these are his favorites. Very him."','gumball'),
+    new LoreItem(16,13,'Orange Mushroom', '"Getting close to the ghost clearing. You can hear it humming."','hardcandy'),
+    new LoreItem(26,3, 'Golden Mushroom', '"Right at the ghost clearing! He left this one just for you two."','jawbreaker'),
+  ];
+  G.enemies=[new Enemy(18,30,3),new Enemy(14,21,3),new Enemy(17,12,0)];
+  G.crackers=[new HealthPack(16,28),new HealthPack(18,14)];
+  G.npcs=[];
+  G.scoodles=new JellyBonesGhost(27,3);
+  G.robert=null;G.benny=null;G.steph=null;G.dad=null;
+  G.player.wx=27*TS+5;G.player.wy=42*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
+}
+
+// ── Level 3: Richardson Elementary ───────────────────
+function setupLevel3(){
+  fillR(1,1,MW-2,MH-2,GRASS);
+  fillR(1,1,MW-2,3,TREE);fillR(1,40,MW-2,3,TREE);
+  fillR(1,1,3,MH-2,TREE);fillR(56,1,3,MH-2,TREE);
+  hln(22,36,16,PATH);vln(30,36,5,PATH);
+  fillR(4,7,52,32,ROCK);
+  fillR(5,8,50,30,COBBLE);
+  hln(5,19,50,ROCK);hln(5,21,50,ROCK);
+  vln(29,8,30,ROCK);vln(31,8,30,ROCK);
+  hln(5,8,50,ROCK);hln(5,37,50,ROCK);
+  vln(5,8,30,ROCK);vln(54,8,30,ROCK);
+  fillR(6,9,22,9,SAND);fillR(32,9,21,9,SAND);
+  fillR(6,22,22,14,SAND);fillR(32,22,21,14,SAND);
+  vln(17,9,10,ROCK);setT(17,13,COBBLE);setT(17,14,COBBLE);
+  for(const x of [9,12,21,25,36,40,47,51]){setT(x,19,COBBLE);setT(x,21,COBBLE);}
+  for(const y of [11,14,25,30]){setT(29,y,COBBLE);setT(31,y,COBBLE);}
+  setT(29,37,COBBLE);setT(30,37,COBBLE);setT(31,37,COBBLE);
+  setT(28,20,ROCK);setT(32,20,ROCK);
+  G.npcs=[
+    new NPC(10,12,'Mr. Berg','#1a2a4a','#c0d8f0',[
+      '"Welcome! I am Mr. Berg, the principal. So great to have you here."',
+      '"Your dad came by this morning. On the golf cart. Right through the front door."',
+      '"He left fourteen treats hidden all over the school. Fourteen!"',
+      '"I told him that was too many. He did not listen. Find them all."',
+    ]),
+    new NPC(22,12,'Mr. Blakemore','#2a1a3a','#d0b0f0',[
+      '"Hi! Mr. Blakemore, school counselor."',
+      '"Your dad came in and said: my kids are going to find every single one."',
+      '"He seemed very confident. I believed him."',
+    ]),
+    new NPC(37,12,'Mrs. Thompson','#3a1a1a','#f0c0b0',[
+      '"Mrs. Thompson! So happy you are here."',
+      '"Your dad hid one behind my stapler. I found it. Then I re-hid it for you."',
+      '"Check every corner. He was very thorough."',
+    ]),
+    new NPC(50,12,'Mrs. Godfrey','#1a3a1a','#b0f0c0',[
+      '"Mrs. Godfrey! Welcome!"',
+      '"Your dad left one on my desk. I may have eaten it. I am so sorry."',
+      '"There are still plenty left. Check the gym and the cafeteria!"',
+    ]),
+    new NPC(40,30,'Ben','#2a3a5a','#f0e060',[
+      '"Hey! I am Ben! Eloise knows me!"',
+      '"Your dad came in on a golf cart and gave everyone candy. Best school day ever."',
+      '"Mr. Berg was not even mad. I think he secretly liked it."',
+      '"There is one near the water fountain. I saw him put it there."',
+    ]),
+  ];
+  G.lore=[
+    new LoreItem(8,11,  'Lollipop',   '"By Mr. Bergs door. He said you would find this one first."',             'lollipop'),
+    new LoreItem(13,16, 'Gummy Bear', '"Near the principal window. He winked when he hid this one."',           'gummy'),
+    new LoreItem(20,10, 'Chocolate',  '"Outside the counselor office door."',                                   'chocolate'),
+    new LoreItem(24,16, 'Taffy',      '"In the corner of the counselor room."',                                 'taffy'),
+    new LoreItem(35,10, 'Jawbreaker', '"Mrs. Thompsons room! She re-hid this one fair and square."',             'jawbreaker'),
+    new LoreItem(43,15, 'Hard Candy', '"Behind the bookshelf in Mrs. Thompsons classroom."',                     'hardcandy'),
+    new LoreItem(48,10, 'Candy Corn', '"Mrs. Godfreys desk. She is very sorry about the other one."',            'candycorn'),
+    new LoreItem(52,15, 'Gumball',    '"Under the window ledge in Mrs. Godfreys room."',                        'gumball'),
+    new LoreItem(8,26,  'Lollipop',   '"Inside the gym! He rolled it all the way to the back wall."',             'lollipop'),
+    new LoreItem(17,32, 'Gummy Bear', '"Near the gym wall. Very sneaky placement."',                               'gummy'),
+    new LoreItem(24,26, 'Chocolate',  '"By the gym exit. Easy to walk right past."',                               'chocolate'),
+    new LoreItem(36,24, 'Jawbreaker', '"Right by the water fountain. Ben saw him put it there."',                  'jawbreaker'),
+    new LoreItem(45,32, 'Taffy',      '"Back corner of the cafeteria. Last place you would look."',                'taffy'),
+    new LoreItem(52,26, 'Hard Candy', '"Fourteen! By the library window. You got every single one."',              'hardcandy'),
+  ];
+  G.enemies=[];
+  G.crackers=[new HealthPack(16,26),new HealthPack(42,26)];
+  G.scoodles=null;G.robert=null;G.benny=null;G.steph=null;G.dad=null;
+  G.player.wx=30*TS+5;G.player.wy=38*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
+}
+
+// ── Level 4: Taekwondo Dojo ────────────────────────────
+function setupLevel4(){
+  fillR(1,1,MW-2,MH-2,GRASS);
+  fillR(7,3,46,38,ROCK);
+  fillR(8,4,44,36,COBBLE);
+  fillR(11,7,38,26,SAND);
+  fillR(9,5,42,2,ROCK);
+  fillR(42,7,4,24,ROCK);
+  hln(11,19,38,ROCK);
+  setT(19,19,SAND);setT(20,19,SAND);setT(28,19,SAND);setT(29,19,SAND);
+  fillR(24,38,12,4,COBBLE);fillR(27,41,6,2,PATH);
+  setT(29,37,COBBLE);setT(30,37,COBBLE);
+  fillR(10,29,2,5,WATER);
+  G.lore=[
+    new LoreItem(14,9, 'White Belt', '"First belt! Mr. Catana says: begin with a calm mind."',      'gummy'),
+    new LoreItem(36,9, 'Yellow Belt','"Yellow belt! Ms. Lana says: move like you mean it."',         'lollipop'),
+    new LoreItem(14,24,'Green Belt', '"Green belt! Mr. Catana says: now you are starting to scare me."','hardcandy'),
+    new LoreItem(36,24,'Blue Belt',  '"Blue belt! Ms. Lana says: you two are a great team."',        'chocolate'),
+    new LoreItem(27,14,'Red Belt',   '"Red belt! One away from black. Mr. Catana is almost smiling."','jawbreaker'),
+  ];
+  G.enemies=[new Enemy(15,24,1),new Enemy(36,24,1),new Enemy(15,10,1),new Enemy(36,10,1)];
+  G.crackers=[new HealthPack(10,8),new HealthPack(10,26)];
+  G.npcs=[
+    new NPC(19,9,'Mr. Catana','#101020','#D4AF37',[
+      '"Welcome to the dojo. I am Mr. Catana. Belts are scattered on the training mats."',
+      '"Collect all five to earn your rank. Show me what you two can do."',
+      '"Power is nothing without precision. Slow down. Then go fast."',
+    ]),
+    new NPC(36,9,'Ms. Lana','#0a1828','#FF80FF',[
+      '"Ms. Lana. Nice to meet you both. Those belts will not collect themselves."',
+      '"I have seen a lot of students. You two look ready. Go prove it."',
+      '"Balance first. Power second. That is the whole secret."',
+    ]),
+  ];
+  G.scoodles=null;G.robert=null;G.benny=null;G.steph=null;G.dad=null;
+  G.player.wx=29*TS+5;G.player.wy=40*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
+}
+
+// ── Level 4: Purple Park (Lowenstein Park) ────────────
+function setupLevel5(){
+  fillR(1,1,MW-2,MH-2,GRASS);
+  fillR(1,1,MW-2,3,TREE);fillR(1,39,MW-2,4,TREE);fillR(1,1,4,MH-2,TREE);fillR(55,1,4,MH-2,TREE);
+  fillR(5,4,50,7,COBBLE);
+  fillR(26,10,8,5,COBBLE);
+  vln(15,10,28,PATH);vln(44,10,28,PATH);
+  hln(15,10,30,PATH);hln(15,22,30,PATH);hln(15,36,30,PATH);
+  // Oval lawn
+  for(let y=12;y<30;y++)for(let x=8;x<30;x++){
+    const nx=(x-19)/10,ny=(y-21)/9;
+    if(nx*nx+ny*ny<1)setT(x,y,FLOWER);
+  }
+  // Playground mulch (round-ish)
+  fillR(16,24,24,14,SAND);
+  for(let y=24;y<38;y++)for(let x=16;x<40;x++){
+    const nx=(x-28)/12,ny=(y-31)/7;
+    if(nx*nx+ny*ny>1)setT(x,y,GRASS);
+  }
+  // Pavilion
+  fillR(33,27,10,9,HOUSE);
+  setT(37,35,COBBLE);setT(38,35,COBBLE);
+  // Splash pad
+  fillR(46,14,6,5,WATER);
+  // Flower border
+  for(let x=5;x<55;x+=4)setT(x,11,FLOWER);
+  G.lore=[
+    new LoreItem(19,16,'Lollipop', '"Right on the big grassy oval! Dad probably rolled down it first."',   'lollipop'),
+    new LoreItem(24,28,'Gummy Bear','"On the playground. He says he went down the slide. I believe him."',  'gummy'),
+    new LoreItem(48,17,'Jawbreaker','"By the splash pad. He was definitely watching the ducks."',           'jawbreaker'),
+    new LoreItem(36,30,'Chocolate', '"Inside the pavilion. He says this is his favorite spot to sit."',     'chocolate'),
+    new LoreItem(10,22,'Taffy',     '"Near the oval lawn path. Left it right by the tallest tree."',        'taffy'),
+  ];
+  G.enemies=[new Enemy(20,20,0),new Enemy(42,22,3),new Enemy(10,32,0)];
+  G.crackers=[new HealthPack(20,28),new HealthPack(44,30)];
+  G.npcs=[
+    new NPC(28,16,'Park Friend','#a06040','#f0e0a0',[
+      '"Oh hi! Welcome to Purple Park! Your dad was just here."',
+      '"He left little glowing treats all over the park. Very him."',
+      '"Check the playground, the pavilion, and the splash pad area!"',
+    ]),
+  ];
+  G.scoodles=null;G.robert=null;G.benny=null;G.steph=null;G.dad=null;
+  G.player.wx=30*TS+5;G.player.wy=9*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:1};
+}
+
+// ── Level 5: Haystack Rock, Cannon Beach ──────────────
+function setupLevel6(){
+  fillR(1,1,MW-2,MH-2,SAND);
+  fillR(1,1,16,MH-2,WATER);
+  fillR(51,1,8,MH-2,TALL);
+  vln(21,1,MH,PATH);
+  // Tide pools
+  for(const[x,y]of[[7,14],[8,13],[9,15],[6,16],[10,13],[7,18],[8,19]])setT(x,y,WATER);
+  for(const[x,y]of[[7,24],[8,23],[6,25],[9,22],[8,26]])setT(x,y,WATER);
+  // HAYSTACK ROCK
+  fillR(2,10,14,16,ROCK);
+  fillR(4,6,10,5,ROCK);
+  fillR(6,3,7,4,ROCK);
+  fillR(7,1,5,3,ROCK);
+  // Sea stacks
+  fillR(1,5,3,7,ROCK);fillR(15,20,3,6,ROCK);
+  G.lore=[
+    new LoreItem(24,38,'Shell',         '"A perfect striped shell. The beach always gives the best ones."',          'gummy'),
+    new LoreItem(26,30,'Starfish',      '"Giant orange starfish. Just sitting there. Living its best life."',        'lollipop'),
+    new LoreItem(24,22,'Sand Dollar',   '"A whole sand dollar! Eloise said it looks like a cookie. She is right."',  'hardcandy'),
+    new LoreItem(22,14,'Puffin Feather','"All the way at the rock! A puffin flew right over. Thatcher saw it first."','chocolate'),
+    new LoreItem(23,5, 'Sea Glass',     '"Smooth green glass, tumbled by the ocean for years. Beautiful."',         'jawbreaker'),
+  ];
+  G.enemies=[new Enemy(26,34,2),new Enemy(28,24,2),new Enemy(24,12,3)];
+  G.crackers=[new HealthPack(27,38),new HealthPack(25,18)];
+  G.npcs=[
+    new NPC(30,10,'Beachcomber','#c8a060','#90c8f0',[
+      '"Best beach in the world. That rock has been standing there 15 million years."',
+      '"Your dad drove a golf cart right onto this sand. That man."',
+      '"Puffins nest at the top in spring. Keep an eye out."',
+    ]),
+  ];
+  G.dad=new DadNPC(20,4);
+  G.dad.lines=[
+    '"THERE you are! Best beach on earth. I have been here the whole time."',
+    '"I drove the cart down. The wheels really did not love the sand."',
+    '"Look at that rock. We are coming back every summer. Just us. That is a promise."',
+    '"Okay. One more stop. You know exactly where we are going."',
+  ];
+  G.scoodles=null;G.robert=null;G.benny=null;G.steph=null;
+  G.player.wx=28*TS+5;G.player.wy=42*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
+}
+
+// ── Level 6: Casey's ──────────────────────────────────
+function setupLevel7(){
+  fillR(1,1,MW-2,MH-2,GRASS);
+  fillR(40,1,12,MH-2,PATH);
+  hln(1,36,58,PATH);
+  fillR(8,6,28,26,COBBLE);
+  fillR(12,8,16,16,HOUSE);
+  setT(19,23,COBBLE);setT(20,23,COBBLE);
+  fillR(30,10,8,14,COBBLE);
+  setT(32,12,ROCK);setT(34,12,ROCK);setT(32,18,ROCK);setT(34,18,ROCK);
+  fillR(18,24,16,12,COBBLE);
+  fillR(22,36,8,2,PATH);
+  fillR(8,6,3,6,FLOWER);fillR(35,6,4,4,FLOWER);
+  fillR(1,1,7,35,TREE);
+  fillR(22,26,6,4,COBBLE);
+  G.lore=[
+    new LoreItem(27,26,'Kinder Egg', '"Your Kinder Egg. Dad says open it right now."',         'gummy'),
+    new LoreItem(29,27,'Apple Juice','"Cold apple juice. Same as always. From the back cooler."','lollipop'),
+  ];
+  G.enemies=[];
+  G.crackers=[new HealthPack(14,20)];
+  G.npcs=[
+    new NPC(16,22,'Cashier','#a07040','#f0e0c0',[
+      '"Hey! Your dad already paid for everything."',
+      '"He does this every single time. Same order. Same big smile."',
+      '"You have a really good dad. Just so you know."',
+    ]),
+  ];
+  G.dad=new DadNPC(26,26);
+  G.dad.lines=[
+    '"Kinder egg. Apple juice. Same as always."',
+    '"I want you both to know something. Every single adventure we go on together, this is my favorite part."',
+    '"Not the candy trail. Not the golf cart or the cave or the beach."',
+    '"This part. Right here. Same spot. Every time. With you two. That is everything."',
+  ];
+  G.scoodles=new ScoodlesNPC(20,28);
+  G.benny=new BennyDog(22,30);
+  G.robert=null;G.steph=null;
+  G.player.wx=28*TS+5;G.player.wy=38*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
+}
+
+// ── Music & SFX ───────────────────────────────────────
+const Music=(()=>{
+  let ctx,master,muted=false,nextTime=0,loopId=null;
+  const BPS=108/60, b=1/BPS;
+  const N={
+    C3:130.81,F3:174.61,G3:196.00,A3:220.00,
+    C4:261.63,E4:329.63,G4:392.00,A4:440.00,
+    C5:523.25,D5:587.33,E5:659.25,G5:783.99,A5:880.00
+  };
+  function n(freq,t,dur,vol,wave){
+    if(!ctx||muted||!freq)return;
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(master);o.type=wave||'square';o.frequency.value=freq;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol||0.12,t+0.01);
+    g.gain.exponentialRampToValueAtTime(0.001,t+dur*0.82);o.start(t);o.stop(t+dur);
+  }
+  // Main melody — cozy adventure loop
+  const MEL=[
+    [N.E5,.5],[N.G5,.5],[N.A5,1],[N.G5,.5],[N.E5,.5],
+    [N.D5,1],[N.E5,.5],[N.G5,.5],[null,1],
+    [N.G5,.5],[N.A5,.5],[N.G5,1],[N.E5,.5],[N.D5,.5],
+    [N.C5,2],[null,2],
+    [N.E5,.5],[N.D5,.5],[N.E5,.5],[N.G5,.5],[N.A5,1],[null,1],
+    [N.G5,.5],[N.E5,.5],[N.D5,1],[N.C5,.5],[N.D5,.5],
+    [N.E5,1],[N.G5,.5],[N.A5,.5],[N.G5,1],[N.E5,1],
+    [N.C5,3],[null,1],
+  ];
+  const BASS=[
+    [N.C3,4],[N.G3,4],[N.F3,4],[N.C3,4],
+    [N.C3,4],[N.A3,2],[N.G3,2],[N.C3,4],
+  ];
+  const HARM=[
+    [N.C4,4],[N.G4,4],[N.A4,4],[N.C4,4],
+    [N.C4,4],[N.A4,4],[N.G4,4],[N.C4,4],
+  ];
+  function loop(){
+    if(!ctx||muted)return;
+    const t=Math.max(ctx.currentTime+0.05,nextTime);
+    let mt=t,bt=t,ht=t,beats=0;
+    for(const[freq,dur]of MEL){n(freq,mt,dur*b,0.10,'square');mt+=dur*b;beats+=dur;}
+    for(const[freq,dur]of BASS)n(freq,bt,dur*b,0.14,'sine'),bt+=dur*b;
+    for(const[freq,dur]of HARM)n(freq,ht,dur*b,0.06,'triangle'),ht+=dur*b;
+    nextTime=t+beats*b;
+    loopId=setTimeout(loop,(beats*b-0.25)*1000);
+  }
+  return{
+    start(){
+      if(ctx)return;
+      try{ctx=new(window.AudioContext||window.webkitAudioContext)();
+        master=ctx.createGain();master.gain.value=0.28;master.connect(ctx.destination);
+        loop();
+      }catch(e){}
+    },
+    toggle(){
+      muted=!muted;
+      if(master)master.gain.setTargetAtTime(muted?0:0.28,ctx.currentTime,0.08);
+      if(!muted){nextTime=0;loop();}
+      return muted;
+    },
+    get muted(){return muted;},
+    sfx:{
+      collect(){
+        if(!ctx||muted)return;
+        [523,659,784,1047].forEach((f,i)=>{
+          const o=ctx.createOscillator(),g=ctx.createGain();
+          o.connect(g);g.connect(master);o.type='square';o.frequency.value=f;
+          const t=ctx.currentTime+i*0.055;
+          g.gain.setValueAtTime(0.14,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.12);
+          o.start(t);o.stop(t+0.12);
+        });
+      },
+      hit(){
+        if(!ctx||muted)return;
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(master);o.type='sawtooth';
+        o.frequency.setValueAtTime(120,ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(40,ctx.currentTime+0.12);
+        g.gain.setValueAtTime(0.2,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.15);
+        o.start();o.stop(ctx.currentTime+0.15);
+      },
+      dadFound(){
+        if(!ctx||muted)return;
+        [523,659,784,1047,1319,1568].forEach((f,i)=>{
+          const o=ctx.createOscillator(),g=ctx.createGain();
+          o.connect(g);g.connect(master);o.type='square';o.frequency.value=f;
+          const t=ctx.currentTime+i*0.09;
+          g.gain.setValueAtTime(0.18,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
+          o.start(t);o.stop(t+0.5);
+        });
+      },
+      chime(){
+        if(!ctx||muted)return;
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(master);o.type='sine';o.frequency.value=880;
+        g.gain.setValueAtTime(0.1,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
+        o.start();o.stop(ctx.currentTime+0.3);
+      }
+    }
+  };
+})();
+
+(function loop(){G.update();G.draw();requestAnimationFrame(loop);})();
+</script>
+</body>
+</html>
