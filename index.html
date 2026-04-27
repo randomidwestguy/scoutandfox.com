@@ -277,6 +277,7 @@ class Player extends Entity{
     this.char=0;this.hp=6;this.maxHp=6;
     this.facing={x:0,y:1};this.animT=0;this.moving=false;
     this.inv=0;this.atkT=0;
+    this.jumpT=0;this.jumpPeak=0;this.jumpH=0;
     this.shadowWx=this.wx;this.shadowWy=this.wy;
   }
   update(){
@@ -301,8 +302,13 @@ class Player extends Entity{
     this.shadowWy+=(this.wy+6-this.shadowWy)*0.10;
     if(this.inv>0)this.inv--;
     if(this.atkT>0)this.atkT--;
+    if(this.jumpT>0){
+      this.jumpT--;
+      this.jumpH=Math.sin((1-this.jumpT/this.jumpDur||0)*Math.PI)*this.jumpPeak;
+    }else{this.jumpH=0;}
   }
   attack(){if(this.atkT<=0)this.atkT=22;}
+  startJump(tramp=false){if(this.jumpT>0)return;this.jumpDur=tramp?34:20;this.jumpT=this.jumpDur;this.jumpPeak=tramp?36:16;}
   draw(camX,camY){
     // Draw inactive companion as shadow behind active player
     const csx=this.shadowWx-camX,csy=this.shadowWy-camY;
@@ -323,8 +329,12 @@ class Player extends Entity{
     const topC=sc?C.scTop:C.fxTop,botC=sc?C.scBot:C.fxBot,hairC=sc?C.scHair:C.fxHair;
     const bob=this.moving?Math.sin(this.animT*0.38)*1.5:0;
     const fx=this.facing.x,fy=this.facing.y;
+    const jh=this.jumpH||0;
+    // Ground shadow shrinks as player rises
+    const shadowScale=Math.max(0.2,1-jh/40);
     ctx.fillStyle='rgba(0,0,0,0.18)';
-    ctx.beginPath();ctx.ellipse(sx+11,sy+21,9,4,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(sx+11,sy+21,9*shadowScale,4*shadowScale,0,0,Math.PI*2);ctx.fill();
+    ctx.save();ctx.translate(0,-jh);
     ctx.fillStyle=botC;ctx.fillRect(sx+4,sy+12+bob,14,10);
     ctx.fillStyle=topC;ctx.fillRect(sx+4,sy+11+bob,14,6);
     ctx.fillStyle=topC;ctx.fillRect(sx+0,sy+12-bob,4,7);ctx.fillRect(sx+18,sy+12+bob,4,7);
@@ -401,7 +411,7 @@ class Enemy extends Entity{
       const dx=player.cx-this.cx,dy=player.cy-this.cy,l=Math.sqrt(dx*dx+dy*dy)||1;
       const sp=[1.8,1.5,2.4,1.9][this.type];
       if(l>24)this.tryMove(dx/l*sp,dy/l*sp);
-      if(l<24&&player.inv<=0){
+      if(l<24&&player.inv<=0&&(player.jumpH||0)<4){
         player.hp--;player.inv=160;G.shakeT=8;Music.sfx.hit();
         player.wx+=(player.cx-this.cx)/l*7;player.wy+=(player.cy-this.cy)/l*7;
         if(player.hp<=0)G.die();
@@ -469,6 +479,7 @@ class Enemy extends Entity{
       ctx.fillStyle=this.hp===3?'#22c55e':this.hp===2?'#f59e0b':'#ef4444';
       ctx.fillRect(bx,by,bw*(this.hp/this.maxHp),bh);
     }
+    ctx.restore();
   }
 }
 
@@ -1091,10 +1102,10 @@ class StephNPC extends Entity{
 
 // ── Steph — loving stepmom, home base ────────────────
 
-const K={left:false,right:false,up:false,down:false,atk:false,use:false,tab:false,snap:false,mute:false};
+const K={left:false,right:false,up:false,down:false,atk:false,use:false,tab:false,snap:false,mute:false,jump:false};
 const KP={};
 const KMAP={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',
-  KeyA:'left',KeyD:'right',KeyW:'up',KeyS:'down',Space:'atk',KeyE:'use',Enter:'use',Tab:'tab',KeyQ:'snap',KeyM:'mute'};
+  KeyA:'left',KeyD:'right',KeyW:'up',KeyS:'down',Space:'atk',KeyE:'use',Enter:'use',Tab:'tab',KeyQ:'snap',KeyM:'mute',KeyZ:'jump'};
 document.addEventListener('keydown',e=>{
   const k=KMAP[e.code];if(!k)return;
   if(!K[k])KP[k]=true;K[k]=true;
@@ -1113,7 +1124,7 @@ function wrapText(text,x,y,maxW,lh){
 
 // ── Game ───────────────────────────────────────────────
 const G={
-  state:'title',score:0,camX:0,camY:0,selChar:0,shakeT:0,level:1,levelIntroTimer:0,
+  state:'title',score:0,camX:0,camY:0,selChar:0,shakeT:0,level:1,levelIntroTimer:0,trampoline:null,
   player:null,enemies:[],npcs:[],lore:[],fx:[],crackers:[],dad:null,scoodles:null,robert:null,benny:null,steph:null,dlg:null,loreDlg:null,foundDad:false,stephOpen:false,interactDelay:0,
   completedLevel(){
     if(this.level<7){this.loadLevel(this.level+1);}
@@ -1124,7 +1135,7 @@ const G={
     resetWorld();
     this.lore=[];this.enemies=[];this.npcs=[];this.crackers=[];this.fx=[];
     this.dlg=null;this.loreDlg=null;this.foundDad=false;this.stephOpen=false;
-    this.dad=null;this.steph=null;this.scoodles=null;this.robert=null;this.benny=null;
+    this.dad=null;this.steph=null;this.scoodles=null;this.robert=null;this.benny=null;this.trampoline=null;
     if(this.player){this.player.hp=Math.min(this.player.maxHp,this.player.hp+2);this.player.inv=0;}
     if(n===2)setupLevel2();
     else if(n===3)setupLevel3();
@@ -1194,7 +1205,7 @@ const G={
       new LoreItem(4,4,  'Lollipop',    '"I left this here for you two. The adventure starts now. Follow the trail!"',                         'lollipop'),
       new LoreItem(9,14, 'Jawbreaker',  '"Buddy, found this near the island. These are the good ones. Getting warmer!"',                       'jawbreaker'),
       new LoreItem(19,14,'Chocolate',   '"Eloisey Lemon Squeezy, spotted this and thought of you right away. Keep going!"',                     'chocolate'),
-      new LoreItem(31,22,'Gummy Bear',  '"Someone left gummies here. Keep going, you two!"',                                                    'gummy'),
+      new LoreItem(31,22,'Gummy Worms', '"Gummy worms! Dad knows these are your favorite. Keep going, you two!"',                                 'gummy'),
       new LoreItem(41,9, 'Hard Candy',  '"More candy for the road. You are getting really close now!"',                                         'hardcandy'),
       new LoreItem(50,16,'Candy Corn',  '"Buddy, found this in the ruins. Totally your kind of thing."',                                        'candycorn'),
       new LoreItem(6,35, 'Taffy',       '"Stop and smell the flowers. Also please eat the taffy. Love you both, Dad"',                          'taffy'),
@@ -1208,6 +1219,7 @@ const G={
     this.scoodles=new ScoodlesNPC(27,21);
     this.robert=new RobertGarbins(20,20);
     this.benny=new BennyDog(22,23);
+    this.trampoline=new Trampoline(21,32);
     this.state='play';this.interactDelay=20;
     this.camX=this.player.wx-VW/2;this.camY=this.player.wy-VH/2;
     Music.start();
@@ -1253,7 +1265,8 @@ const G={
     if(this.stephOpen&&KP.use) this.stephOpen=false;
     if(KP.mute) Music.toggle();
     if(KP.tab){pl.char=1-pl.char;this.fx.push({x:pl.cx,y:pl.cy-26,txt:pl.char===0?'Scout!':'Fox!',life:48,col:'#FFFFFF'});}
-    if(KP.atk)pl.attack();
+    if(KP.atk){pl.attack();Music.sfx.atk();}
+    if(KP.jump&&pl.jumpT===0){pl.startJump();Music.sfx.jump();}
     if(this.interactDelay>0){this.interactDelay--;}
     if(pl.atkT===18){
       const r=50,ax=pl.cx+pl.facing.x*r*0.4,ay=pl.cy+pl.facing.y*r*0.4;
@@ -1278,10 +1291,11 @@ const G={
         l.collected=true;
         const val=CANDY_VALUE[l.kind]||50;
         this.score+=val;
-        this.loreDlg={name:l.name,text:l.text};this.state='lore';acted=true;
         this.fx.push({x:l.cx,y:l.cy-12,txt:'+'+val,life:50,col:C.gold});
         Music.sfx.collect();
         for(let i=0;i<10;i++){const a=(i/10)*Math.PI*2;G.fx.push({type:'spark',x:l.cx,y:l.cy,vx:Math.cos(a)*2.2,vy:Math.sin(a)*2.2-1,life:22,ml:22,col:['#FFD060','#FFA020','#FFFFFF'][i%3]});}
+        if(this.level===1){this.loreDlg={name:l.name,text:l.text};this.state='lore';}
+        acted=true;
         break;
       }
     }
@@ -1293,6 +1307,10 @@ const G={
     });
     pl.update();
     this.enemies.forEach(e=>e.update(pl));
+    if(this.trampoline){
+      this.trampoline.update();
+      if(pl.jumpT===0&&pl.dist(this.trampoline)<22){pl.startJump(true);this.trampoline.bounceT=18;Music.sfx.boing();}
+    }
     if(this.level>=2&&this.level<=5&&this.lore.length>0&&this.lore.every(l=>l.collected)&&this.state==='play')
       this.state='levelcomplete';
     this.lore.forEach(l=>l.update());
@@ -1322,7 +1340,7 @@ const G={
     const tx0=Math.max(0,Math.floor(cx/TS)-1),ty0=Math.max(0,Math.floor(cy/TS)-1);
     const tx1=Math.min(MW-1,tx0+Math.ceil(VW/TS)+2),ty1=Math.min(MH-1,ty0+Math.ceil(VH/TS)+2);
     for(let ty=ty0;ty<=ty1;ty++)for(let tx=tx0;tx<=tx1;tx++)drawTile(tx,ty,tx*TS-cx,ty*TS-cy);
-    const ents=[this.player,...this.enemies,...this.npcs,...this.lore,...this.crackers,...[this.dad,this.scoodles,this.robert,this.benny,this.steph].filter(Boolean)];
+    const ents=[this.player,...this.enemies,...this.npcs,...this.lore,...this.crackers,...[this.trampoline,this.dad,this.scoodles,this.robert,this.benny,this.steph].filter(Boolean)];
     ents.sort((a,b)=>a.cy-b.cy);
     for(const e of ents)e.draw(cx,cy);
     // Particles
@@ -1513,7 +1531,7 @@ function drawHUD(){
     ctx.fillText('DAD FOUND  ♥',VW-12,32);
   }else{
     ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font=`400 10px ${F}`;
-    ctx.fillText(`Q·Steph  TAB·E·SPACE  M:${typeof Music!=='undefined'&&Music.muted?'off':'♪'}`,VW-12,32);
+    ctx.fillText(`Q·Steph  Z·jump  SPACE·atk  M:${typeof Music!=='undefined'&&Music.muted?'off':'♪'}`,VW-12,32);
   }
 }
 
@@ -1959,6 +1977,37 @@ function setupLevel7(){
   G.player.wx=28*TS+5;G.player.wy=38*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
 }
 
+
+// ── Trampoline ────────────────────────────────────────
+class Trampoline extends Entity{
+  constructor(tx,ty){
+    super(tx*TS+1,ty*TS+4,30,24);
+    this.t=0;this.bounceT=0;
+  }
+  update(){this.t+=0.05;if(this.bounceT>0)this.bounceT--;}
+  draw(camX,camY){
+    const sx=this.wx-camX,sy=this.wy-camY;
+    const sq=this.bounceT>0?Math.sin(this.bounceT/5)*4:0;
+    // legs
+    ctx.fillStyle='#606060';
+    ctx.fillRect(sx+3,sy+14+sq,4,10-sq);ctx.fillRect(sx+23,sy+14+sq,4,10-sq);
+    // base feet
+    ctx.fillRect(sx+1,sy+22,8,3);ctx.fillRect(sx+21,sy+22,8,3);
+    // springs
+    ctx.fillStyle='#a0a0a0';
+    for(let i=0;i<5;i++)ctx.fillRect(sx+4+i*5,sy+10+sq,3,6-sq);
+    // mat
+    ctx.fillStyle='#E8205A';ctx.fillRect(sx+2,sy+6+sq,26,6-sq);
+    ctx.fillStyle='#FF4080';ctx.fillRect(sx+2,sy+6+sq,26,2);
+    // stars on mat
+    ctx.fillStyle='#FFD060';ctx.font=`bold 8px ${F}`;ctx.textAlign='center';
+    ctx.fillText('★',sx+8,sy+11+sq);ctx.fillText('★',sx+22,sy+11+sq);
+    // label
+    ctx.fillStyle='rgba(255,255,255,0.7)';ctx.font=`500 7px ${F}`;
+    ctx.fillText('Z',sx+15,sy+1);
+  }
+}
+
 // ── Music & SFX ───────────────────────────────────────
 const Music=(()=>{
   let ctx,master,muted=false,nextTime=0,loopId=null;
@@ -2056,6 +2105,36 @@ const Music=(()=>{
         o.connect(g);g.connect(master);o.type='sine';o.frequency.value=880;
         g.gain.setValueAtTime(0.1,ctx.currentTime);g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.3);
         o.start();o.stop(ctx.currentTime+0.3);
+      },
+      atk(){
+        if(!ctx||muted)return;
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(master);o.type='square';
+        o.frequency.setValueAtTime(320,ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(70,ctx.currentTime+0.1);
+        g.gain.setValueAtTime(0.18,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.12);
+        o.start();o.stop(ctx.currentTime+0.12);
+      },
+      jump(){
+        if(!ctx||muted)return;
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(master);o.type='square';
+        o.frequency.setValueAtTime(220,ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(520,ctx.currentTime+0.1);
+        g.gain.setValueAtTime(0.1,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.14);
+        o.start();o.stop(ctx.currentTime+0.14);
+      },
+      boing(){
+        if(!ctx||muted)return;
+        [180,360,540,360,180].forEach((f,i)=>{
+          const o=ctx.createOscillator(),g=ctx.createGain();
+          o.connect(g);g.connect(master);o.type='sine';o.frequency.value=f;
+          const t=ctx.currentTime+i*0.07;
+          g.gain.setValueAtTime(0.18,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.1);
+          o.start(t);o.stop(t+0.1);
+        });
       }
     }
   };
