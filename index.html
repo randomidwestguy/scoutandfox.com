@@ -1731,8 +1731,8 @@ function drawCharIcon(cx,cy,isScout,s){
 function drawHUD(){
   const pl=G.player;
   // Top bar
-  ctx.fillStyle='rgba(10,8,20,0.92)';ctx.fillRect(0,0,VW,42);
-  ctx.fillStyle='rgba(139,92,246,0.3)';ctx.fillRect(0,41,VW,1);
+  ctx.fillStyle='rgba(10,8,20,0.92)';ctx.fillRect(0,0,VW,48);
+  ctx.fillStyle='rgba(139,92,246,0.3)';ctx.fillRect(0,47,VW,1);
 
   // Character avatar circle
   const acol=pl.char===0?'#34d399':'#f59e0b';
@@ -1754,37 +1754,40 @@ function drawHUD(){
   }
 
   // Score - centered pill
-  ctx.fillStyle='rgba(255,255,255,0.06)';rr(VW/2-44,6,88,30,15);ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.12)';rr(VW/2-44,6,88,30,15);ctx.stroke();ctx.lineWidth=1;
-  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font=`600 9px ${F}`;ctx.textAlign='center';
-  ctx.fillText('SCORE',VW/2,18);
-  ctx.fillStyle='#fff';ctx.font=`800 15px ${F}`;
-  ctx.fillText(String(G.score).padStart(5,'0'),VW/2,34);
+  ctx.fillStyle='rgba(255,255,255,0.06)';rr(VW/2-44,4,88,26,13);ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.12)';ctx.lineWidth=1;rr(VW/2-44,4,88,26,13);ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font=`600 8px ${F}`;ctx.textAlign='center';
+  ctx.fillText('SCORE',VW/2,15);
+  ctx.fillStyle='#fff';ctx.font=`800 13px ${F}`;
+  ctx.fillText(String(G.score).padStart(5,'0'),VW/2,29);
 
-  // Goal counter - right side, label changes per level
+  // Goal counter - top right
   const lc=G.lore.filter(l=>l.collected).length;
   const goalLabels=['','Clues','Mushrooms','Treats','Belts','Treats','Treats','Treasures','Treats','Treats'];
   const goalLabel=goalLabels[G.level]||'Treats';
   ctx.textAlign='right';
-  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font=`600 11px ${F}`;
-  ctx.fillText(`${goalLabel}  ${lc} / ${G.lore.length}`,VW-12,18);
+  ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font=`600 10px ${F}`;
+  ctx.fillText(`${goalLabel}  ${lc} / ${G.lore.length}`,VW-10,20);
   if(G.foundDad){
-    ctx.fillStyle='#22c55e';ctx.font=`700 11px ${F}`;
-    ctx.fillText('DAD FOUND  ♥',VW-12,32);
-  }else{
-    const hints=[['E','Talk'],['SPACE','Attack'],['Z','Jump'],['P','Grab'],['TAB','Swap'],['Q','Steph'],['R','Restart'],['M',Music.muted?'off':'♪']];
-    let hx=VW-8;
-    ctx.textAlign='right';
-    hints.slice().reverse().forEach(([key,lbl])=>{
-      ctx.font=`400 9px ${F}`;
-      const kw=ctx.measureText(key).width;const lw=ctx.measureText(lbl).width;
-      const pw=kw+lw+14;
-      ctx.fillStyle='rgba(0,0,0,0.35)';rr(hx-pw,21,pw,13,3);ctx.fill();
-      ctx.fillStyle='rgba(255,220,60,0.9)';ctx.font=`700 9px ${F}`;ctx.fillText(key,hx-pw+4+kw,31);
-      ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font=`400 9px ${F}`;ctx.fillText(lbl,hx-4,31);
-      hx-=pw+3;
-    });
+    ctx.fillStyle='#22c55e';ctx.font=`700 10px ${F}`;
+    ctx.fillText('DAD FOUND  ♥',VW-10,32);
   }
+
+  // Key hints - second row, compact, only essential ones
+  const hints=[['E','Talk'],['SPC','Atk'],['Z','Jump'],['P','Grab'],['TAB','Swap'],['Q','Steph'],['M',Music.muted?'off':'♪']];
+  let hintX=8;
+  ctx.textAlign='left';
+  hints.forEach(([key,lbl])=>{
+    ctx.font=`700 8px ${F}`;
+    const kw=ctx.measureText(key+' ').width;
+    ctx.font=`400 8px ${F}`;
+    const lw=ctx.measureText(lbl).width;
+    ctx.fillStyle='rgba(255,220,60,0.85)';ctx.font=`700 8px ${F}`;
+    ctx.fillText(key,hintX,40);
+    ctx.fillStyle='rgba(255,255,255,0.45)';ctx.font=`400 8px ${F}`;
+    ctx.fillText(' '+lbl,hintX+kw-2,40);
+    hintX+=kw+lw+10;
+  });
 }
 
 function drawDlg(dlg){
