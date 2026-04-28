@@ -406,13 +406,15 @@ class Enemy extends Entity{
   }
   update(player){
     if(this.dead){this.deadT++;return;}
+    if(this.state==='carried'||this.inWater)return;
     if(this.state==='hurt'){if(--this.hurtT<=0)this.state='idle';return;}
     this.animT++;
     const d=this.dist(player);
     if(d<5*TS)this.state='chase';else this.state='idle';
     if(this.state==='chase'){
       const dx=player.cx-this.cx,dy=player.cy-this.cy,l=Math.sqrt(dx*dx+dy*dy)||1;
-      const sp=[1.8,1.5,2.4,1.9][this.type];
+      const lvlMult=[1,1,1.12,1.22,1.32,1.42,1.5][Math.min(G.level,6)]||1;
+      const sp=[1.8,1.5,2.4,1.9][this.type]*lvlMult;
       if(l>24)this.tryMove(dx/l*sp,dy/l*sp);
       if(l<24&&player.inv<=0&&(player.jumpH||0)<4){
         player.hp--;player.inv=160;G.shakeT=8;Music.sfx.hit();
@@ -943,12 +945,48 @@ class BennyDog extends Entity{
     this.treatT=0; // treat bubble timer
     this._lines=[
       '"................................treat?"',
+      '"treat."',
+      '"TREAT."',
+      '"treat please."',
+      '"treat? treat. treat."',
       '"I am 14 years old. I have earned a treat."',
       '"Did someone say treat? I cannot hear. But I can smell."',
       '"I was just sitting here. Do you have a treat though."',
-      '"TREAT."',
+      '"Have you considered giving me a treat."',
+      '"I would like a treat if that is okay."',
+      '"I have been a very good boy. Treat?"',
+      '"Treat situation? What is the treat situation."',
+      '"I am not asking. I am just wondering. About a treat."',
+      '"Excuse me. Treat."',
+      '"Is that a treat in your pocket."',
+      '"I smelled something. Was it a treat."',
+      '"I will sit. I will stay. I will do anything. Treat."',
+      '"One treat. That is all I ask. One treat."',
+      '"I have been waiting very patiently. Treat?"',
+      '"The correct answer is treat."',
+      '"I am thinking about treats. What are you thinking about."',
+      '"My whole life I have asked one thing. Treat."',
+      '"If you have a treat please raise your hand."',
+      '"Treat? Yes? No? Maybe? Treat?"',
+      '"I cannot believe there is no treat right now."',
+      '"I have given this a lot of thought. Treat."',
+      '"You look like someone who has a treat."',
+      '"I would do a trick for a treat. Watch. Okay I am too tired. Treat?"',
+      '"Treat. Treat. Treat. Treat. Treat."',
+      '"Just one. I just want one treat."',
+      '"Is this a good time to ask for a treat."',
+      '"I will be your best friend. Treat?"',
+      '"I forgot what I was doing. Oh yes. Treat."',
+      '"The word of the day is treat."',
+      '"I am not asleep. I am dreaming about treats."',
+      '"What if we just did treats right now."',
+      '"I have sniffed this entire area. No treats. I am devastated."',
+      '"Benny would like a treat. Benny is Benny."',
+      '"I saw a squirrel. Then I forgot about it. Treat?"',
+      '"This is my formal request for a treat."',
     ];
     this._li=0;
+    for(let i=this._lines.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[this._lines[i],this._lines[j]]=[this._lines[j],this._lines[i]];}
   }
   get lines(){
     // rotate through lines each interaction
@@ -1104,10 +1142,10 @@ class StephNPC extends Entity{
 
 // ── Steph — loving stepmom, home base ────────────────
 
-const K={left:false,right:false,up:false,down:false,atk:false,use:false,tab:false,snap:false,mute:false,jump:false,restart:false};
+const K={left:false,right:false,up:false,down:false,atk:false,use:false,tab:false,snap:false,mute:false,jump:false,restart:false,pickup:false};
 const KP={};
 const KMAP={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',
-  KeyA:'left',KeyD:'right',KeyW:'up',KeyS:'down',Space:'atk',KeyE:'use',Enter:'use',Tab:'tab',KeyQ:'snap',KeyM:'mute',KeyZ:'jump',KeyR:'restart'};
+  KeyA:'left',KeyD:'right',KeyW:'up',KeyS:'down',Space:'atk',KeyE:'use',Enter:'use',Tab:'tab',KeyQ:'snap',KeyM:'mute',KeyZ:'jump',KeyR:'restart',KeyP:'pickup'};
 document.addEventListener('keydown',e=>{
   const k=KMAP[e.code];if(!k)return;
   if(!K[k])KP[k]=true;K[k]=true;
@@ -1126,11 +1164,11 @@ function wrapText(text,x,y,maxW,lh){
 
 // ── Game ───────────────────────────────────────────────
 const G={
-  state:'title',score:0,camX:0,camY:0,selChar:0,shakeT:0,level:1,levelIntroTimer:0,trampoline:null,clearedLevels:new Set(),
+  state:'title',score:0,camX:0,camY:0,selChar:0,shakeT:0,level:1,levelIntroTimer:0,trampoline:null,clearedLevels:new Set(),carriedEnemy:null,moose:null,vaughnPetted:false,
   player:null,enemies:[],npcs:[],lore:[],fx:[],crackers:[],dad:null,scoodles:null,robert:null,benny:null,steph:null,dlg:null,loreDlg:null,foundDad:false,stephOpen:false,interactDelay:0,
   completedLevel(){
     this.clearedLevels.add(this.level);
-    if(this.level<7){this.level++;this.state='worldmap';this.worldMapTimer=0;}
+    if(this.level<8){this.level++;this.state='worldmap';this.worldMapTimer=0;}
     else{this.state='gameend';}
   },
   loadLevel(n){
@@ -1138,7 +1176,7 @@ const G={
     resetWorld();
     this.lore=[];this.enemies=[];this.npcs=[];this.crackers=[];this.fx=[];
     this.dlg=null;this.loreDlg=null;this.foundDad=false;this.stephOpen=false;
-    this.dad=null;this.steph=null;this.scoodles=null;this.robert=null;this.benny=null;this.trampoline=null;
+    this.dad=null;this.steph=null;this.scoodles=null;this.robert=null;this.benny=null;this.trampoline=null;this.carriedEnemy=null;this.moose=null;this.vaughnPetted=false;
     if(this.player){this.player.hp=Math.min(this.player.maxHp,this.player.hp+2);this.player.inv=0;}
     if(n===2)setupLevel2();
     else if(n===3)setupLevel3();
@@ -1146,6 +1184,7 @@ const G={
     else if(n===5)setupLevel5();
     else if(n===6)setupLevel6();
     else if(n===7)setupLevel7();
+    else if(n===8)setupLevel8();
     this.interactDelay=30;
     this.state='levelintro';
     this.levelIntroTimer=180;
@@ -1240,6 +1279,10 @@ const G={
         const onDone=this.dlg.onDone;this.dlg=null;
         if(onDone==='levelcomplete'){this.state='levelcomplete';}
         else if(onDone==='gameend'){this.state='gameend';}
+        else if(onDone==='spawnMoose'){
+          if(!this.moose){this.moose={wx:24*TS,wy:26*TS,t:0,petted:false};}
+          this.state='play';
+        }
         else{this.state='play';}
       }}
       Object.keys(KP).forEach(k=>delete KP[k]);return;
@@ -1254,6 +1297,20 @@ const G={
     if(this.stephOpen&&KP.use) this.stephOpen=false;
     if(KP.mute) Music.toggle();
     if(KP.restart){this.loadLevel(this.level);return;}
+    if(KP.pickup){
+      if(this.carriedEnemy){
+        // throw - check if over water
+        const e=this.carriedEnemy;this.carriedEnemy=null;
+        const tx=Math.floor(e.cx/TS),ty=Math.floor(e.cy/TS);
+        const isWater=getT(tx,ty)===WATER||getT(tx+1,ty)===WATER||getT(tx-1,ty)===WATER;
+        if(isWater){e.inWater=true;e.waterX=e.wx;e.waterDir=1;e.state='floating';e.dead=false;}
+        else{e.state='idle';e.inWater=false;}
+      } else {
+        // pick up nearest alive non-carried enemy
+        const near=this.enemies.filter(e=>!e.dead&&!e.inWater&&this.player.dist(e)<44).sort((a,b)=>this.player.dist(a)-this.player.dist(b))[0];
+        if(near){near.state='carried';this.carriedEnemy=near;}
+      }
+    }
     if(KP.tab){pl.char=1-pl.char;this.fx.push({x:pl.cx,y:pl.cy-26,txt:pl.char===0?'Scout!':'Fox!',life:48,col:'#FFFFFF'});}
     if(KP.atk){pl.attack();Music.sfx.atk();}
     if(KP.jump&&pl.jumpT===0){pl.startJump();Music.sfx.jump();}
@@ -1274,9 +1331,12 @@ const G={
       // Dad
       if(this.dad&&!acted&&pl.dist(this.dad)<60){
         if(!this.dad.found){this.dad.found=true;this.score+=500;this.fx.push({x:pl.cx,y:pl.cy-30,txt:'YOU FOUND DAD! +500',life:90,col:'#FFD060'});Music.sfx.dadFound();}
-        this.dlg={speaker:'Dad',lines:this.dad.lines,idx:0,onDone:this.level===7?'gameend':'levelcomplete'};this.state='dialogue';acted=true;
+        this.dlg={speaker:'Dad',lines:this.dad.lines,idx:0,onDone:this.level===8?'gameend':'levelcomplete'};this.state='dialogue';acted=true;
       }
-      for(const n of this.npcs){if(!acted&&pl.dist(n)<56){this.dlg={speaker:n.name,lines:n.lines,idx:0};this.state='dialogue';acted=true;break;}}
+      for(const n of this.npcs){if(!acted&&pl.dist(n)<56){
+        const onDone=n.name==='Mrs. Vaughn'?'spawnMoose':undefined;
+        this.dlg={speaker:n.name,lines:n.lines,idx:0,onDone};this.state='dialogue';acted=true;break;
+      }}
       if(!acted)for(const l of this.lore)if(!l.collected&&pl.dist(l)<54){
         l.collected=true;
         const val=CANDY_VALUE[l.kind]||50;
@@ -1297,11 +1357,34 @@ const G={
     });
     pl.update();
     this.enemies.forEach(e=>e.update(pl));
+    // Carried enemy follows player
+    if(this.carriedEnemy){
+      const e=this.carriedEnemy;
+      e.wx=pl.wx+pl.facing.x*18;e.wy=pl.wy-14;
+    }
+    // Floating enemies bob in water
+    this.enemies.filter(e=>e.inWater).forEach(e=>{
+      e.wx+=e.waterDir*0.35;
+      if(e.wx>e.waterX+22||e.wx<e.waterX-22)e.waterDir*=-1;
+    });
     if(this.trampoline){
       this.trampoline.update();
       if(pl.jumpT===0&&pl.dist(this.trampoline)<22){pl.startJump(true);this.trampoline.bounceT=18;Music.sfx.boing();}
     }
-    if(this.level>=2&&this.level<=5&&this.lore.length>0&&this.lore.every(l=>l.collected)&&this.state==='play')
+    // Moose pet check
+    if(this.moose){
+      this.moose.t=(this.moose.t||0)+1;
+      const mx=this.moose.wx+16,my=this.moose.wy+16;
+      const dx=pl.cx-mx,dy=pl.cy-my,mdist=Math.sqrt(dx*dx+dy*dy);
+      if(mdist<40&&KP.use&&!this.vaughnPetted){
+        this.vaughnPetted=true;
+        if(pl.hp<pl.maxHp){pl.hp=pl.maxHp;this.fx.push({x:pl.cx,y:pl.cy-24,txt:'Full Health! Good dog!',life:70,col:'#ff80ff'});}
+        else{this.score+=100;this.fx.push({x:pl.cx,y:pl.cy-24,txt:'+100 Good dog!',life:70,col:'#FFD060'});}
+        Music.sfx.collect();
+        this.fx.push({x:mx,y:my-20,txt:'woof!',life:70,col:'#f0c0ff'});
+      }
+    }
+    if(this.level>=2&&this.level<=6&&this.lore.length>0&&this.lore.every(l=>l.collected)&&this.state==='play')
       this.state='levelcomplete';
     this.lore.forEach(l=>l.update());
     this.crackers.forEach(cr=>cr.update());
@@ -1370,6 +1453,45 @@ const G={
     const vig=ctx.createRadialGradient(VW/2,VH/2,VH*0.3,VW/2,VH/2,VH*0.78);
     vig.addColorStop(0,'rgba(0,0,0,0)');vig.addColorStop(1,'rgba(0,0,0,0.42)');
     ctx.fillStyle=vig;ctx.fillRect(0,0,VW,VH);
+    // Draw Moose if present
+    if(this.moose){
+      const msx=this.moose.wx-this.camX,msy=this.moose.wy-this.camY;
+      const wag=Math.sin((this.moose.t||0)*0.18)*6;
+      const bob2=Math.abs(Math.sin((this.moose.t||0)*0.06))*3;
+      // body
+      ctx.fillStyle='#c8b090';ctx.fillRect(msx+2,msy+10+bob2,28,14);
+      // head
+      ctx.fillStyle='#c8b090';ctx.fillRect(msx+22,msy+4+bob2,14,12);
+      // snout
+      ctx.fillStyle='#b09070';ctx.fillRect(msx+32,msy+8+bob2,8,6);
+      ctx.fillStyle='#402010';ctx.fillRect(msx+37,msy+8+bob2,3,3);
+      // ears
+      ctx.fillStyle='#a07850';ctx.fillRect(msx+22,msy+bob2,5,6);ctx.fillRect(msx+30,msy+bob2,5,6);
+      // eyes
+      ctx.fillStyle='#201008';ctx.fillRect(msx+25,msy+7+bob2,3,3);
+      // tongue
+      ctx.fillStyle='#e06080';ctx.fillRect(msx+34,msy+11+bob2,4,4);
+      // legs
+      ctx.fillStyle='#a09070';
+      ctx.fillRect(msx+4, msy+22,5,8);ctx.fillRect(msx+10,msy+22,5,8);
+      ctx.fillRect(msx+18,msy+22,5,8);ctx.fillRect(msx+24,msy+22,5,8);
+      // tail wag
+      ctx.fillStyle='#c8b090';ctx.fillRect(msx+2+wag,msy+8+bob2,6,4);
+      // shepherd markings - darker saddle
+      ctx.fillStyle='rgba(60,30,10,0.35)';ctx.fillRect(msx+8,msy+10+bob2,16,8);
+      // E bubble if close
+      const mdx=this.player.cx-(this.moose.wx+16),mdy=this.player.cy-(this.moose.wy+16);
+      if(Math.sqrt(mdx*mdx+mdy*mdy)<44&&!this.vaughnPetted){
+        ctx.fillStyle='rgba(255,255,255,0.95)';
+        rr(msx+8,msy-20,22,18,5);ctx.fill();
+        ctx.fillStyle='#222';ctx.font=`700 11px ${F}`;ctx.textAlign='center';
+        ctx.fillText('E',msx+19,msy-7);
+      }
+      if(this.vaughnPetted){
+        ctx.fillStyle='rgba(255,160,220,0.7)';ctx.font=`500 9px ${F}`;ctx.textAlign='center';
+        ctx.fillText('good dog',msx+16,msy-4);
+      }
+    }
     // Ambient warm lighting — sunlight from upper left
     const amb=ctx.createRadialGradient(VW*.25,VH*.2,0,VW*.25,VH*.2,VW*.9);
     amb.addColorStop(0,'rgba(255,240,160,0.05)');amb.addColorStop(1,'rgba(10,5,20,0.18)');
@@ -1377,9 +1499,24 @@ const G={
     drawHUD();
     if(this.state==='dialogue'&&this.dlg)drawDlg(this.dlg);
     if(this.state==='lore'&&this.loreDlg)drawLoreDlg(this.loreDlg);
+    // Water ripples under floating enemies
+    this.enemies.filter(e=>e.inWater).forEach(e=>{
+      const ex=e.wx-this.camX,ey=e.wy-this.camY;
+      ctx.strokeStyle='rgba(80,200,255,0.5)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.ellipse(ex+11,ey+20,14+Math.sin(tick*0.06)*2,5,0,0,Math.PI*2);ctx.stroke();
+      ctx.strokeStyle='rgba(80,200,255,0.25)';
+      ctx.beginPath();ctx.ellipse(ex+11,ey+20,20+Math.sin(tick*0.06+1)*2,7,0,0,Math.PI*2);ctx.stroke();
+    });
     if(this.state==='over')drawOver();
     if(this.state==='worldmap')drawWorldMap();
     if(this.stephOpen&&this.steph)drawStephPopup(this.getStephTip());
+    // Carried enemy label
+    if(this.carriedEnemy){
+      const e=this.carriedEnemy;
+      const ex=e.wx-this.camX,ey=e.wy-this.camY;
+      ctx.fillStyle='#FFD060';ctx.font=`700 9px ${F}`;ctx.textAlign='center';
+      ctx.fillText('P: throw',ex+11,ey-6);
+    }
     // Level atmospheric overlays
     if(this.level===2){
       ctx.fillStyle='rgba(70,90,130,0.16)';ctx.fillRect(0,0,VW,VH);
@@ -1391,13 +1528,13 @@ const G={
         ctx.fillStyle=fg;ctx.fillRect(0,0,VW,VH);
       }
     }else if(this.level===5){ctx.fillStyle='rgba(255,190,80,0.07)';ctx.fillRect(0,0,VW,VH);}
-    else if(this.level===7){ctx.fillStyle='rgba(255,140,40,0.1)';ctx.fillRect(0,0,VW,VH);}
+    else if(this.level===8){ctx.fillStyle='rgba(255,140,40,0.1)';ctx.fillRect(0,0,VW,VH);}
     // Level intro overlay (drawn on top of world)
     if(this.state==='levelintro'){
       const a=Math.min(1,this.levelIntroTimer/40);
       ctx.fillStyle=`rgba(0,0,0,${0.78*a})`;ctx.fillRect(0,0,VW,VH);
-      const lvlNames=['','Bridgeport','Jelly Bones Ghost Boy','Richardson Elementary','The Dojo','Purple Park','Haystack Rock',"Casey's"];
-      const lvlGoals=['','Follow the candy trail to find Dad','Collect all 4 mushrooms to complete the trail','Collect all 14 treats hidden in the school','Collect all 5 belts to earn your rank','Collect all 5 treats hidden in the park','Collect 5 beach treasures then find Dad','Find Dad at the counter'];
+      const lvlNames=['','Bridgeport','Jelly Bones Ghost Boy','Richardson Elementary','The Dojo',"Steph's House",'Purple Park','Haystack Rock',"Casey's"];
+      const lvlGoals=['','Follow the candy trail to find Dad','Collect all 4 mushrooms to complete the trail','Collect all 14 treats hidden in the school','Collect all 5 belts to earn your rank','Collect 8 treats for the sleepover!','Collect all 5 treats hidden in the park','Collect 5 beach treasures then find Dad','Find Dad at the counter'];
       ctx.globalAlpha=a;
       ctx.fillStyle='#FFD060';ctx.font=`700 13px ${F}`;ctx.textAlign='center';
       ctx.fillText('Level '+this.level,VW/2,VH/2-30);
@@ -1586,105 +1723,163 @@ function drawOver(){
 
 function drawWorldMap(){
   const t=G.worldMapTimer||0;
-  // Background - night sky
-  ctx.fillStyle='#0a0820';ctx.fillRect(0,0,VW,VH);
-  // Stars
-  for(let i=0;i<80;i++){
-    const sx2=(Math.sin(i*73.1)*0.5+0.5)*VW,sy2=(Math.cos(i*41.7)*0.5+0.5)*VH;
-    const br=0.3+Math.sin(t*0.04+i)*0.2;
-    ctx.fillStyle=`rgba(255,255,255,${br})`;
-    ctx.beginPath();ctx.arc(sx2,sy2,0.7+Math.sin(i*5.3)*0.4,0,Math.PI*2);ctx.fill();
-  }
-  // Title
-  ctx.fillStyle='#FFD060';ctx.font=`700 22px ${F}`;ctx.textAlign='center';
-  ctx.fillText('Adventure Map',VW/2,44);
-  ctx.fillStyle='rgba(255,220,120,0.5)';ctx.font=`400 11px ${F}`;
-  ctx.fillText('Press E to continue',VW/2,64);
 
-  // Level node positions - zigzag like Mario World
+  // ── Sky gradient background
+  const sky=ctx.createLinearGradient(0,0,0,VH);
+  sky.addColorStop(0,'#0a0428');sky.addColorStop(0.5,'#1a0a4a');sky.addColorStop(1,'#2a1060');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,VW,VH);
+
+  // ── Twinkling stars
+  for(let i=0;i<120;i++){
+    const sx2=(Math.sin(i*73.1+i*0.3)*0.5+0.5)*VW;
+    const sy2=(Math.cos(i*41.7+i*0.2)*0.5+0.5)*(VH*0.75);
+    const br=0.25+Math.sin(t*0.05+i*1.7)*0.2+Math.cos(t*0.07+i*2.3)*0.1;
+    const r=0.6+Math.sin(i*3.1)*0.5;
+    ctx.fillStyle=`rgba(255,255,255,${br})`;
+    ctx.beginPath();ctx.arc(sx2,sy2,r,0,Math.PI*2);ctx.fill();
+  }
+
+  // ── Rolling hills at bottom
+  ctx.fillStyle='#1a3a0a';
+  ctx.beginPath();ctx.moveTo(0,VH);
+  for(let x=0;x<=VW;x+=4){
+    const h=VH-28-Math.sin(x*0.018+t*0.005)*12-Math.sin(x*0.031+t*0.007)*8;
+    ctx.lineTo(x,h);
+  }
+  ctx.lineTo(VW,VH);ctx.closePath();ctx.fill();
+
+  ctx.fillStyle='#244e0e';
+  ctx.beginPath();ctx.moveTo(0,VH);
+  for(let x=0;x<=VW;x+=4){
+    const h=VH-14-Math.sin(x*0.022+1.5+t*0.004)*8-Math.sin(x*0.041+t*0.006)*5;
+    ctx.lineTo(x,h);
+  }
+  ctx.lineTo(VW,VH);ctx.closePath();ctx.fill();
+
+  // ── Floating clouds
+  [[80,55],[220,40],[360,62],[500,38],[600,52]].forEach(([cx2,cy2],i)=>{
+    const cx3=((cx2+t*0.25*(i%2?1:-1)+VW)%VW);
+    ctx.fillStyle='rgba(255,255,255,0.07)';
+    ctx.beginPath();ctx.ellipse(cx3,cy2,32+i*5,14,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx3-18,cy2+4,18,11,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx3+20,cy2+5,20,12,0,0,Math.PI*2);ctx.fill();
+  });
+
+  // ── Title
+  ctx.shadowColor='rgba(200,150,255,0.6)';ctx.shadowBlur=18;
+  ctx.fillStyle='#FFD060';ctx.font=`700 24px ${F}`;ctx.textAlign='center';
+  ctx.fillText('Adventure Map',VW/2,46);
+  ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(255,220,120,0.55)';ctx.font=`400 11px ${F}`;
+  ctx.fillText('Press E to continue',VW/2,66);
+
+  // ── Level nodes
   const nodes=[
-    {x:110,y:140,n:1,name:'Bridgeport',     icon:'🏠',col:'#60d060'},
-    {x:240,y:140,n:2,name:'Ghost Hike',      icon:'👻',col:'#a060e0'},
-    {x:370,y:140,n:3,name:'Richardson',      icon:'🏫',col:'#60a0e0'},
-    {x:500,y:140,n:4,name:'The Dojo',        icon:'🥋',col:'#e06020'},
-    {x:500,y:260,n:5,name:'Purple Park',     icon:'🌸',col:'#e060c0'},
-    {x:370,y:260,n:6,name:'Haystack Rock',   icon:'🌊',col:'#20a0e0'},
-    {x:240,y:260,n:7,name:"Casey's",         icon:'⛽',col:'#e0a020'},
+    {x:95, y:148,n:1,name:'Bridgeport',    col:'#60d060',emoji:'🏠'},
+    {x:215,y:130,n:2,name:'Ghost Hike',    col:'#a060e0',emoji:'👻'},
+    {x:330,y:148,n:3,name:'Richardson',    col:'#60a0e0',emoji:'🏫'},
+    {x:445,y:130,n:4,name:'The Dojo',      col:'#e06020',emoji:'🥋'},
+    {x:560,y:168,n:5,name:"Steph's House", col:'#9060e0',emoji:'🏡'},
+    {x:560,y:255,n:6,name:'Purple Park',   col:'#e060c0',emoji:'🌸'},
+    {x:420,y:280,n:7,name:'Haystack Rock', col:'#20a0e0',emoji:'🌊'},
+    {x:280,y:255,n:8,name:"Casey's",       col:'#e0a020',emoji:'⛽'},
   ];
 
-  // Draw connecting paths
-  ctx.setLineDash([6,4]);ctx.lineWidth=3;
+  // ── Path between nodes
+  ctx.setLineDash([5,4]);
   for(let i=0;i<nodes.length-1;i++){
     const a=nodes[i],b=nodes[i+1];
-    const cleared=G.clearedLevels.has(a.n);
-    const isNext=G.level===b.n;
-    ctx.strokeStyle=cleared?'#FFD06088':(isNext?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.1)');
+    const isCleared=G.clearedLevels.has(a.n);
+    ctx.strokeStyle=isCleared?'rgba(255,200,50,0.55)':'rgba(255,255,255,0.1)';
+    ctx.lineWidth=2.5;
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
   }
   ctx.setLineDash([]);
 
-  // Animated path progress for current transition
-  if(t<60){
-    const prevIdx=nodes.findIndex(n=>n.n===G.level)-1;
-    if(prevIdx>=0){
-      const a=nodes[prevIdx],b=nodes[prevIdx+1];
-      const prog=Math.min(1,t/50);
-      ctx.strokeStyle='#FFD060';ctx.lineWidth=4;
-      ctx.beginPath();ctx.moveTo(a.x,a.y);
-      ctx.lineTo(a.x+(b.x-a.x)*prog,a.y+(b.y-a.y)*prog);
-      ctx.stroke();
+  // ── Animated gold path progress for current transition
+  if(t<70){
+    const ni=nodes.findIndex(n=>n.n===G.level);
+    if(ni>0){
+      const a=nodes[ni-1],b=nodes[ni];
+      const prog=Math.min(1,(t-5)/55);
+      ctx.strokeStyle='#FFD060';ctx.lineWidth=3.5;ctx.shadowColor='#FFD060';ctx.shadowBlur=8;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(a.x+(b.x-a.x)*prog,a.y+(b.y-a.y)*prog);ctx.stroke();
+      ctx.shadowBlur=0;
     }
   }
 
-  // Draw nodes
-  nodes.forEach(({x,y,n,name,icon,col})=>{
+  // ── Draw each node
+  nodes.forEach(({x,y,n,name,col,emoji})=>{
     const cleared=G.clearedLevels.has(n);
     const isCurrent=G.level===n;
     const isLocked=n>G.level;
-    const pulse=Math.sin(t*0.08)*4;
+    const pulse=Math.sin(t*0.09)*5;
+    const r=isCurrent?26:22;
 
-    // Outer glow for current
+    // Glow ring for current
     if(isCurrent){
-      ctx.fillStyle=`${col}33`;
-      ctx.beginPath();ctx.arc(x,y,32+pulse,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=col+'28';
+      ctx.beginPath();ctx.arc(x,y,r+14+pulse,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=col+'18';
+      ctx.beginPath();ctx.arc(x,y,r+24+pulse,0,Math.PI*2);ctx.fill();
     }
-    // Node circle
-    ctx.fillStyle=isLocked?'#1a1830':cleared?col:isCurrent?col:'#2a2848';
-    ctx.beginPath();ctx.arc(x,y,24,0,Math.PI*2);ctx.fill();
-    ctx.strokeStyle=isCurrent?'#FFFFFF':cleared?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.1)';
-    ctx.lineWidth=isCurrent?3:1.5;
-    ctx.beginPath();ctx.arc(x,y,24,0,Math.PI*2);ctx.stroke();
 
-    // Icon or lock
-    ctx.font='18px serif';ctx.textAlign='center';
-    ctx.fillStyle=isLocked?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.0)';
-    ctx.fillText(isLocked?'🔒':icon,x,y+7);
+    // Node shadow
+    ctx.fillStyle='rgba(0,0,0,0.35)';
+    ctx.beginPath();ctx.ellipse(x+3,y+4,r,r*0.6,0,0,Math.PI*2);ctx.fill();
 
-    // Check stamp for cleared
+    // Node fill - gradient for cleared/current
+    if(!isLocked){
+      const grad=ctx.createRadialGradient(x-4,y-4,2,x,y,r);
+      grad.addColorStop(0,isCurrent?'#ffffff':cleared?col+'ee':col+'99');
+      grad.addColorStop(1,col+(isCurrent?'dd':'88'));
+      ctx.fillStyle=grad;
+    } else {
+      ctx.fillStyle='#1a1430';
+    }
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+
+    // Border
+    ctx.strokeStyle=isCurrent?'#FFFFFF':cleared?'rgba(255,255,255,0.5)':'rgba(255,255,255,0.12)';
+    ctx.lineWidth=isCurrent?2.5:1.5;
+    ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();
+
+    // Inner shine
+    if(!isLocked){
+      ctx.fillStyle='rgba(255,255,255,0.18)';
+      ctx.beginPath();ctx.arc(x-r*0.25,y-r*0.28,r*0.45,0,Math.PI*2);ctx.fill();
+    }
+
+    // Emoji / lock
+    ctx.font=isLocked?'13px serif':`${isCurrent?'17':'14'}px serif`;
+    ctx.textAlign='center';
+    ctx.fillText(isLocked?'🔒':emoji,x,y+6);
+
+    // Check mark
     if(cleared){
-      ctx.fillStyle='rgba(255,255,255,0.9)';ctx.font=`700 14px ${F}`;
-      ctx.fillText('✓',x,y+6);
+      ctx.fillStyle='rgba(255,255,255,0.95)';ctx.font=`700 12px ${F}`;
+      ctx.textAlign='center';ctx.fillText('✓',x+r-5,y-r+10);
     }
 
-    // Name label
-    ctx.fillStyle=isLocked?'rgba(255,255,255,0.2)':isCurrent?'#FFFFFF':cleared?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.4)';
-    ctx.font=`${isCurrent?'700':'500'} 11px ${F}`;ctx.textAlign='center';
-    ctx.fillText(name,x,y+42);
+    // Name below
+    ctx.fillStyle=isLocked?'rgba(255,255,255,0.18)':isCurrent?'#fff':cleared?'rgba(255,255,255,0.75)':'rgba(255,255,255,0.4)';
+    ctx.font=`${isCurrent?'700':'500'} 10px ${F}`;ctx.textAlign='center';
+    ctx.fillText(name,x,y+r+15);
+    ctx.fillStyle='rgba(255,255,255,0.25)';ctx.font=`400 8px ${F}`;
+    ctx.fillText('Level '+n,x,y+r+26);
 
-    // Level number
-    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`400 9px ${F}`;
-    ctx.fillText('Lv '+n,x,y+54);
-
-    // Current marker - bouncing character dot
+    // Bouncing star character marker
     if(isCurrent){
-      const bounce=Math.sin(t*0.1)*5;
-      ctx.fillStyle='#FFD060';
-      ctx.beginPath();ctx.arc(x,y-32-bounce,6,0,Math.PI*2);ctx.fill();
+      const bcy=y-r-12-Math.abs(Math.sin(t*0.12))*8;
+      ctx.fillStyle='#FFD060';ctx.shadowColor='#FFD060';ctx.shadowBlur=10;
+      ctx.beginPath();ctx.arc(x,bcy,6,0,Math.PI*2);ctx.fill();
+      ctx.shadowBlur=0;
       ctx.fillStyle='#fff';ctx.font=`700 8px ${F}`;ctx.textAlign='center';
-      ctx.fillText('★',x,y-29-bounce);
+      ctx.fillText('★',x,bcy+3);
     }
   });
 }
+
 
 function drawStephPopup(tip){
   // Full overlay tint
@@ -1891,8 +2086,13 @@ function setupLevel3(){
       '"Your dad left a treat on my desk. I may have eaten it. I am so truly sorry."',
       '"Eloise, you are doing so wonderfully. Now go find the rest of those treats!"',
     ]),
+    new NPC(22,24,'Mrs. Vaughn','#3a2a1a','#f0d0b0',[
+      '"Hello there! I am Mrs. Vaughn. Would you like to meet Moose, our therapy dog?"',
+      '"Press E again to say yes, or walk away if you are shy!"',
+    ]),
     new NPC(40,30,'Ben','#2a3a5a','#f0e060',[
-      '"Hey! I am Ben! Eloise knows me!"',
+      '"What is up girlypops!"',
+      '"I am Ben! Eloise knows me!"',
       '"Your dad came in on a golf cart and gave everyone candy. Best school day ever."',
       '"Mr. Berg was not even mad. I think he secretly liked it."',
       '"There is one near the water fountain. I saw him put it there."',
@@ -1922,7 +2122,7 @@ function setupLevel3(){
   G.player.wx=30*TS+5;G.player.wy=38*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
 }
 
-// ── Level 4: Taekwondo Dojo ────────────────────────────
+// ── Level 4: The Taekwondo Dojo ────────────────────────────
 function setupLevel4(){
   fillR(1,1,MW-2,MH-2,GRASS);
   fillR(7,3,46,38,ROCK);
@@ -1950,7 +2150,7 @@ function setupLevel4(){
       '"Collect all five to earn your rank. Show me what you two can do."',
       '"Power is nothing without precision. Slow down. Then go fast."',
     ]),
-    new NPC(36,9,'Ms. Lana','#0a1828','#FF80FF',[
+    new NPC(36,5,'Ms. Lana','#0a1828','#FF80FF',[
       '"Ms. Lana. Nice to meet you both. Those belts will not collect themselves."',
       '"I have seen a lot of students. You two look ready. Go prove it."',
       '"Balance first. Power second. That is the whole secret."',
@@ -1961,8 +2161,106 @@ function setupLevel4(){
   G.player.wx=29*TS+5;G.player.wy=40*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
 }
 
-// ── Level 4: Purple Park (Lowenstein Park) ────────────
+
+// ── Level 5: Steph's House ────────────────────────────
 function setupLevel5(){
+  fillR(1,1,MW-2,MH-2,GRASS);
+  fillR(1,1,MW-2,3,TREE);
+  fillR(1,1,4,MH-3,TREE);
+  fillR(55,1,4,MH-3,TREE);
+  fillR(1,40,MW-2,3,TREE);
+  setT(12,8,TREE);setT(13,8,TREE);setT(12,9,TREE);
+  setT(48,10,TREE);setT(49,10,TREE);
+  setT(6,20,TREE);setT(7,20,TREE);
+  // Main house body (gray = ROCK walls, HOUSE interior)
+  fillR(18,6,28,22,ROCK);
+  fillR(19,7,26,20,HOUSE);
+  // Garage
+  fillR(46,10,10,14,ROCK);
+  fillR(47,11,8,12,COBBLE);
+  hln(47,10,8,PATH);
+  // Porch
+  fillR(19,26,26,4,SAND);
+  hln(19,26,26,COBBLE);
+  // Driveway
+  fillR(46,24,10,16,PATH);
+  fillR(46,24,10,1,COBBLE);
+  // Front path
+  vln(30,30,10,PATH);vln(31,30,10,PATH);
+  // Interior hallway
+  vln(30,7,20,COBBLE);vln(31,7,20,COBBLE);
+  // Living room / kitchen floors
+  fillR(19,7,11,10,SAND);
+  fillR(32,7,13,10,SAND);
+  // Back rooms
+  fillR(19,18,11,9,COBBLE);
+  fillR(32,18,13,9,COBBLE);
+  // Room dividers
+  hln(19,17,26,ROCK);
+  setT(30,17,COBBLE);setT(31,17,COBBLE);
+  hln(19,7,26,ROCK);
+  setT(30,7,PATH);setT(31,7,PATH);
+  // Windows
+  setT(21,8,WATER);setT(22,8,WATER);
+  setT(35,8,WATER);setT(36,8,WATER);
+  setT(21,19,WATER);setT(22,19,WATER);
+  setT(35,19,WATER);setT(36,19,WATER);
+  // Backyard
+  fillR(5,30,50,9,FLOWER);
+  fillR(10,32,10,5,GRASS);
+  // Trampoline in backyard
+  G.trampoline=new Trampoline(28,34);
+  G.steph=new StephNPC(23,12);
+  G.steph._lines=[
+    '"Welcome home! I am so glad you are both here."',
+    '"Ava and Emaline have been SO excited for this sleepover."',
+    '"Collect all the candy around the house and yard for the treat bag!"',
+    '"And yes someone let Benny in. He asked very nicely."',
+  ];
+  G.dad=new DadNPC(34,12);
+  G.dad.lines=[
+    '"SLEEPOVER NIGHT! This is the best night."',
+    '"I hid candy everywhere. Couch cushions. Behind the TV. Everywhere."',
+    '"Ava and Emaline both know where some are. Ask them!"',
+    '"I also may have given one to Benny. He was very persistent."',
+  ];
+  G.dad.found=false;
+  G.benny=new BennyDog(33,22);
+  G.scoodles=new ScoodlesNPC(20,22);
+  G.scoodles._intro='"I was invited. Steph invited me. Do not look at me like that."';
+  G.robert=null;
+  G.npcs=[
+    new NPC(22,20,'Ava','#4060c0','#c0d0ff',[
+      '"Hi!! I am Ava!! I am SEVEN! Do you want to see my rock collection?"',
+      '"I have 47 rocks. This one is my favorite. It is igneous."',
+      '"Dad hid candy behind the couch cushions. I saw him. I was looking for rocks in the carpet."',
+      '"I found a really good rock in the backyard today. It has sparkles in it."',
+    ]),
+    new NPC(36,20,'Emaline','#c040a0','#ffe0f8',[
+      '"...hi. Watch this."',
+      '"(She does a cartwheel.)"',
+      '"I can also do a round off. Do you want to see my round off."',
+      '"Dad put one under the couch pillow. I am not supposed to say that."',
+      '"Can Scoodles sleep in my room. I will do a cartwheel for Scoodles."',
+    ]),
+  ];
+  G.lore=[
+    new LoreItem(21,10,'Gummy Worms',   '"Behind the living room couch! Ava was right."',        'gummy'),
+    new LoreItem(37,10,'Chocolate Bar', '"In the kitchen drawer. Dad is very predictable."',      'chocolate'),
+    new LoreItem(25,13,'Lollipop',      '"Under the couch pillow. Emaline totally knew."',        'lollipop'),
+    new LoreItem(38,22,'Jawbreaker',    '"In the garage on the shelf. A bold hiding spot."',      'jawbreaker'),
+    new LoreItem(20,21,'Taffy',         '"On the bookshelf in the back room."',                   'taffy'),
+    new LoreItem(16,32,'Candy Corn',    '"In the backyard near Avas rock collection. Dad went all out."',   'candycorn'),
+    new LoreItem(40,33,'Hard Candy',    '"Way in the back corner of the yard."',                  'hardcandy'),
+    new LoreItem(30,37,'Gumball',       '"By the trampoline! Best hiding spot of all."',          'gumball'),
+  ];
+  G.enemies=[];
+  G.crackers=[new HealthPack(23,15),new HealthPack(36,15)];
+  G.player.wx=31*TS+5;G.player.wy=29*TS+5;G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
+}
+
+// ── Level 6: Purple Park (Lowenstein Park) ────────────
+function setupLevel6(){
   fillR(1,1,MW-2,MH-2,GRASS);
   fillR(1,1,MW-2,3,TREE);fillR(1,39,MW-2,4,TREE);fillR(1,1,4,MH-2,TREE);fillR(55,1,4,MH-2,TREE);
   fillR(5,4,50,7,COBBLE);
@@ -2011,7 +2309,7 @@ function setupLevel5(){
 }
 
 // ── Level 5: Haystack Rock, Cannon Beach ──────────────
-function setupLevel6(){
+function setupLevel7(){
   fillR(1,1,MW-2,MH-2,SAND);
   fillR(1,1,16,MH-2,WATER);
   fillR(51,1,8,MH-2,TALL);
@@ -2051,7 +2349,7 @@ function setupLevel6(){
 }
 
 // ── Level 6: Casey's ──────────────────────────────────
-function setupLevel7(){
+function setupLevel8(){
   fillR(1,1,MW-2,MH-2,GRASS);
   fillR(40,1,12,MH-2,PATH);
   hln(1,36,58,PATH);
