@@ -1405,16 +1405,24 @@ const G={
     if(KP.restart){this.loadLevel(this.level);return;}
     if(KP.pickup){
       if(this.carriedEnemy){
-        // throw - check if over water
+        // throw
         const e=this.carriedEnemy;this.carriedEnemy=null;
         const tx=Math.floor(e.cx/TS),ty=Math.floor(e.cy/TS);
         const isWater=getT(tx,ty)===WATER||getT(tx+1,ty)===WATER||getT(tx-1,ty)===WATER;
-        if(isWater){e.inWater=true;e.waterX=e.wx;e.waterDir=1;e.state='floating';e.dead=false;}
-        else{e.state='idle';e.inWater=false;}
+        Music.sfx.throw();
+        if(isWater){
+          e.inWater=true;e.waterX=e.wx;e.waterDir=1;e.state='floating';e.dead=false;
+          this.fx.push({x:e.cx,y:e.cy-10,txt:'SPLASH!',life:55,col:'#80d0ff'});
+        } else {
+          // poof and disappear
+          for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2;this.fx.push({type:'spark',x:e.cx,y:e.cy,vx:Math.cos(a)*2.5,vy:Math.sin(a)*2.5-1,life:20,ml:20,col:['#FFD060','#FF8000','#ffffff'][i%3]});}
+          this.fx.push({x:e.cx,y:e.cy-12,txt:'BONK!',life:55,col:'#FFD060'});
+          e.dead=true;e.deadT=0;
+          G.score+=150;this.fx.push({x:e.cx,y:e.cy-24,txt:'+150',life:45,col:C.gold});
+        }
       } else {
-        // pick up nearest alive non-carried enemy
         const near=this.enemies.filter(e=>!e.dead&&!e.inWater&&this.player.dist(e)<44).sort((a,b)=>this.player.dist(a)-this.player.dist(b))[0];
-        if(near){near.state='carried';this.carriedEnemy=near;}
+        if(near){near.state='carried';this.carriedEnemy=near;Music.sfx.pickup();}
       }
     }
     if(KP.tab){pl.char=1-pl.char;this.fx.push({x:pl.cx,y:pl.cy-26,txt:pl.char===0?'Scout!':'Fox!',life:48,col:'#FFFFFF'});}
@@ -2774,6 +2782,31 @@ const Music=(()=>{
           const t=ctx.currentTime+i*0.09;
           g.gain.setValueAtTime(0.18,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
           o.start(t);o.stop(t+0.5);
+        });
+      },
+      pickup(){
+        if(!ctx||muted)return;
+        // Funny "bwoop" pickup sound - rising wobble
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(master);o.type='square';
+        o.frequency.setValueAtTime(180,ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(420,ctx.currentTime+0.1);
+        o.frequency.exponentialRampToValueAtTime(340,ctx.currentTime+0.18);
+        g.gain.setValueAtTime(0.15,ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.22);
+        o.start();o.stop(ctx.currentTime+0.22);
+      },
+      throw(){
+        if(!ctx||muted)return;
+        // Funny "FWOOMP" throw - whoosh down + splat
+        [[0,600,80,0.08,'sawtooth'],[0.06,400,60,0.06,'sawtooth'],
+         [0.12,200,40,0.08,'square'],[0.18,100,30,0.12,'square'],
+         [0.28,880,20,0.06,'sine'],[0.34,440,15,0.08,'sine']].forEach(([t,f,vol,dur,type])=>{
+          const o=ctx.createOscillator(),g=ctx.createGain();
+          o.connect(g);g.connect(master);o.type=type;o.frequency.value=f;
+          g.gain.setValueAtTime(vol/100,ctx.currentTime+t);
+          g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+dur);
+          o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+dur+0.02);
         });
       },
       happyWoof(){
