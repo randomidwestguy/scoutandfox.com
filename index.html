@@ -1486,7 +1486,7 @@ const G={
         this.vaughnPetted=true;
         if(pl.hp<pl.maxHp){pl.hp=pl.maxHp;this.fx.push({x:pl.cx,y:pl.cy-24,txt:'Full Health! Good dog!',life:70,col:'#ff80ff'});}
         else{this.score+=100;this.fx.push({x:pl.cx,y:pl.cy-24,txt:'+100 Good dog!',life:70,col:'#FFD060'});}
-        Music.sfx.collect();
+        Music.sfx.happyWoof();
         this.fx.push({x:mx,y:my-20,txt:'woof!',life:70,col:'#f0c0ff'});
       }
     }
@@ -2061,11 +2061,9 @@ function drawTitle(){
   for(let i=0;i<2;i++){
     const x=i===0?lx:rx, sel=G.selChar===i;
     const accent=i===0?'#34d399':'#f59e0b';
-    // Name above sprite
     ctx.font=`600 15px ${F}`;ctx.textAlign='center';
     ctx.fillStyle=sel?'#1a1814':'rgba(0,0,0,0.35)';
     ctx.fillText(i===0?'Scout':'Fox',x,sy2-52);
-    // Selection ring
     ctx.strokeStyle=sel?accent:'rgba(0,0,0,0.07)';
     ctx.lineWidth=sel?2:1;
     ctx.beginPath();ctx.arc(x,sy2,38,0,Math.PI*2);ctx.stroke();
@@ -2080,7 +2078,7 @@ function drawTitle(){
   ctx.font=`400 12px ${F}`;ctx.fillStyle='rgba(0,0,0,0.22)';ctx.textAlign='center';
   ctx.fillText('←  →',VW/2,sy2+60);
 
-  // Press Enter — static, no animation
+  // Press Enter
   ctx.font=`500 16px ${F}`;ctx.fillStyle='#111111';
   ctx.fillText('Press Enter to Play',VW/2,VH-46);
 
@@ -2774,6 +2772,30 @@ const Music=(()=>{
           g.gain.setValueAtTime(0.18,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
           o.start(t);o.stop(t+0.5);
         });
+      },
+      happyWoof(){
+        if(!ctx||muted)return;
+        // Two bright cheerful barks - high and warm, not harsh
+        [[0, 520, 0.18, 0.18],
+         [0.22, 620, 0.16, 0.16]].forEach(([delay, freq, vol, dur])=>{
+          const o=ctx.createOscillator(),g=ctx.createGain(),filter=ctx.createBiquadFilter();
+          filter.type='bandpass';filter.frequency.value=600;filter.Q.value=1.5;
+          o.connect(filter);filter.connect(g);g.connect(master);
+          o.type='sine';
+          o.frequency.setValueAtTime(freq,ctx.currentTime+delay);
+          o.frequency.exponentialRampToValueAtTime(freq*1.3,ctx.currentTime+delay+0.06);
+          o.frequency.exponentialRampToValueAtTime(freq*0.8,ctx.currentTime+delay+dur);
+          g.gain.setValueAtTime(0,ctx.currentTime+delay);
+          g.gain.linearRampToValueAtTime(vol,ctx.currentTime+delay+0.03);
+          g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+dur);
+          o.start(ctx.currentTime+delay);o.stop(ctx.currentTime+delay+dur+0.05);
+        });
+        // Happy little tail-wag chime after
+        const o2=ctx.createOscillator(),g2=ctx.createGain();
+        o2.connect(g2);g2.connect(master);o2.type='sine';o2.frequency.value=880;
+        g2.gain.setValueAtTime(0.08,ctx.currentTime+0.42);
+        g2.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.62);
+        o2.start(ctx.currentTime+0.42);o2.stop(ctx.currentTime+0.62);
       },
       defeat(){
         if(!ctx||muted)return;
