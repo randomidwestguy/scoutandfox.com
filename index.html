@@ -337,18 +337,18 @@ class Player extends Entity{
     const shadowScale=Math.max(0.2,1-jh/40);
     ctx.fillStyle='rgba(0,0,0,0.18)';
     ctx.beginPath();ctx.ellipse(sx+11,sy+21,9*shadowScale,4*shadowScale,0,0,Math.PI*2);ctx.fill();
-    ctx.save();ctx.translate(0,-jh);
-    ctx.fillStyle=botC;ctx.fillRect(sx+4,sy+12+bob,14,10);
-    ctx.fillStyle=topC;ctx.fillRect(sx+4,sy+11+bob,14,6);
-    ctx.fillStyle=topC;ctx.fillRect(sx+0,sy+12-bob,4,7);ctx.fillRect(sx+18,sy+12+bob,4,7);
-    ctx.fillStyle=C.skin;ctx.fillRect(sx+0,sy+19-bob,4,4);ctx.fillRect(sx+18,sy+19+bob,4,4);
-    ctx.fillStyle=C.skin;ctx.beginPath();ctx.arc(sx+11,sy+7+bob,7,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle=hairC;ctx.beginPath();ctx.arc(sx+11,sy+4+bob,7,Math.PI,0);ctx.fill();
+    const jsy=sy-jh;
+    ctx.fillStyle=botC;ctx.fillRect(sx+4,jsy+12+bob,14,10);
+    ctx.fillStyle=topC;ctx.fillRect(sx+4,jsy+11+bob,14,6);
+    ctx.fillStyle=topC;ctx.fillRect(sx+0,jsy+12-bob,4,7);ctx.fillRect(sx+18,jsy+12+bob,4,7);
+    ctx.fillStyle=C.skin;ctx.fillRect(sx+0,jsy+19-bob,4,4);ctx.fillRect(sx+18,jsy+19+bob,4,4);
+    ctx.fillStyle=C.skin;ctx.beginPath();ctx.arc(sx+11,jsy+7+bob,7,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=hairC;ctx.beginPath();ctx.arc(sx+11,jsy+4+bob,7,Math.PI,0);ctx.fill();
     if(sc){
       // Scout: short hair with swoop across forehead
-      ctx.fillRect(sx+2,sy+3+bob,3,5);    // left side
-      ctx.fillRect(sx+17,sy+3+bob,3,5);   // right side
-      ctx.fillRect(sx+5,sy+1+bob,13,3);   // base fringe
+      ctx.fillRect(sx+2,jsy+3+bob,3,5);    // left side
+      ctx.fillRect(sx+17,jsy+3+bob,3,5);   // right side
+      ctx.fillRect(sx+5,jsy+1+bob,13,3);   // base fringe
       // Hair swoop — curves from left across forehead to right
       ctx.beginPath();
       ctx.moveTo(sx+2,sy+4+bob);
@@ -365,23 +365,23 @@ class Player extends Entity{
       // Fox: medium wavy hair — a little longer, not past ears
       ctx.fillStyle=hairC;
       // Slightly wider base arc
-      ctx.beginPath();ctx.arc(sx+11,sy+3+bob,8,Math.PI,0);ctx.fill();
+      ctx.beginPath();ctx.arc(sx+11,jsy+3+bob,8,Math.PI,0);ctx.fill();
       // Short sides — just at ear level, slight wave
-      ctx.fillRect(sx+1,sy+3+bob,4,6);
-      ctx.fillRect(sx+17,sy+3+bob,4,6);
+      ctx.fillRect(sx+1,jsy+3+bob,4,6);
+      ctx.fillRect(sx+17,jsy+3+bob,4,6);
       // Tiny wave flip at bottom of sides
-      ctx.fillRect(sx+0,sy+8+bob,5,2);
-      ctx.fillRect(sx+17,sy+8+bob,5,2);
+      ctx.fillRect(sx+0,jsy+8+bob,5,2);
+      ctx.fillRect(sx+17,jsy+8+bob,5,2);
       // Messy wavy top
       ctx.fillRect(sx+5,sy-2+bob,5,5);
       ctx.fillRect(sx+10,sy-3+bob,5,5);
       ctx.fillRect(sx+14,sy-1+bob,4,4);
     }
     if(fy>0){
-      ctx.fillStyle='#2A1408';ctx.fillRect(sx+7,sy+8+bob,2,2);ctx.fillRect(sx+14,sy+8+bob,2,2);
-      ctx.fillStyle='rgba(220,100,90,0.7)';ctx.fillRect(sx+9,sy+12+bob,5,2);
+      ctx.fillStyle='#2A1408';ctx.fillRect(sx+7,jsy+8+bob,2,2);ctx.fillRect(sx+14,jsy+8+bob,2,2);
+      ctx.fillStyle='rgba(220,100,90,0.7)';ctx.fillRect(sx+9,jsy+12+bob,5,2);
     }else if(fy<0){
-      ctx.fillStyle=hairC;ctx.beginPath();ctx.arc(sx+11,sy+7+bob,7,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=hairC;ctx.beginPath();ctx.arc(sx+11,jsy+7+bob,7,0,Math.PI*2);ctx.fill();
     }else{
       ctx.fillStyle='#2A1408';ctx.fillRect(fx>0?sx+13:sx+7,sy+8+bob,2,2);
     }
@@ -437,7 +437,7 @@ class Enemy extends Entity{
       const a=(i/7)*Math.PI*2;
       G.fx.push({type:'spark',x:this.cx,y:this.cy,vx:Math.cos(a)*2.8,vy:Math.sin(a)*2.8,life:16,ml:16,col:['#FFD060','#FF8020','#FF4444'][i%3]});
     }
-    if(this.hp<=0){this.dead=true;this.deadT=0;G.score+=150;G.fx.push({x:this.cx,y:this.cy-16,txt:'+150',life:50,col:C.gold});}
+    if(this.hp<=0){this.dead=true;this.deadT=0;G.score+=150;G.fx.push({x:this.cx,y:this.cy-16,txt:'+150',life:50,col:C.gold});Music.sfx.defeat();}
   }
   draw(camX,camY){
     if(this.dead&&this.deadT>28)return;
@@ -482,7 +482,6 @@ class Enemy extends Entity{
       ctx.fillStyle=this.hp===3?'#22c55e':this.hp===2?'#f59e0b':'#ef4444';
       ctx.fillRect(bx,by,bw*(this.hp/this.maxHp),bh);
     }
-    ctx.restore();
   }
 }
 
@@ -1105,10 +1104,10 @@ class StephNPC extends Entity{
 
 // ── Steph — loving stepmom, home base ────────────────
 
-const K={left:false,right:false,up:false,down:false,atk:false,use:false,tab:false,snap:false,mute:false,jump:false};
+const K={left:false,right:false,up:false,down:false,atk:false,use:false,tab:false,snap:false,mute:false,jump:false,restart:false};
 const KP={};
 const KMAP={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',
-  KeyA:'left',KeyD:'right',KeyW:'up',KeyS:'down',Space:'atk',KeyE:'use',Enter:'use',Tab:'tab',KeyQ:'snap',KeyM:'mute',KeyZ:'jump'};
+  KeyA:'left',KeyD:'right',KeyW:'up',KeyS:'down',Space:'atk',KeyE:'use',Enter:'use',Tab:'tab',KeyQ:'snap',KeyM:'mute',KeyZ:'jump',KeyR:'restart'};
 document.addEventListener('keydown',e=>{
   const k=KMAP[e.code];if(!k)return;
   if(!K[k])KP[k]=true;K[k]=true;
@@ -1127,10 +1126,11 @@ function wrapText(text,x,y,maxW,lh){
 
 // ── Game ───────────────────────────────────────────────
 const G={
-  state:'title',score:0,camX:0,camY:0,selChar:0,shakeT:0,level:1,levelIntroTimer:0,trampoline:null,
+  state:'title',score:0,camX:0,camY:0,selChar:0,shakeT:0,level:1,levelIntroTimer:0,trampoline:null,clearedLevels:new Set(),
   player:null,enemies:[],npcs:[],lore:[],fx:[],crackers:[],dad:null,scoodles:null,robert:null,benny:null,steph:null,dlg:null,loreDlg:null,foundDad:false,stephOpen:false,interactDelay:0,
   completedLevel(){
-    if(this.level<7){this.loadLevel(this.level+1);}
+    this.clearedLevels.add(this.level);
+    if(this.level<7){this.level++;this.state='worldmap';this.worldMapTimer=0;}
     else{this.state='gameend';}
   },
   loadLevel(n){
@@ -1166,7 +1166,7 @@ const G={
     return '"You found all the clues! The cave is in the northeast corner of the map. Go find Dad!"';
   },
   start(){
-    this.level=1;restoreLevel1();
+    this.level=1;this.clearedLevels=new Set();restoreLevel1();
     this.score=0;this.fx=[];this.dlg=null;this.loreDlg=null;this.foundDad=false;
     this.player=new Player();
     this.player.char=this.selChar;
@@ -1226,6 +1226,11 @@ const G={
       if(KP.use||KP.atk)this.completedLevel();
       Object.keys(KP).forEach(k=>delete KP[k]);return;
     }
+    if(this.state==='worldmap'){
+      this.worldMapTimer=(this.worldMapTimer||0)+1;
+      if((KP.use||KP.atk)&&this.worldMapTimer>60)this.loadLevel(this.level);
+      Object.keys(KP).forEach(k=>delete KP[k]);return;
+    }
     if(this.state==='gameend'){
       if(KP.use||KP.atk){this.state='title';this.level=1;}
       Object.keys(KP).forEach(k=>delete KP[k]);return;
@@ -1248,6 +1253,7 @@ const G={
     if(KP.snap) this.stephOpen=!this.stephOpen;
     if(this.stephOpen&&KP.use) this.stephOpen=false;
     if(KP.mute) Music.toggle();
+    if(KP.restart){this.loadLevel(this.level);return;}
     if(KP.tab){pl.char=1-pl.char;this.fx.push({x:pl.cx,y:pl.cy-26,txt:pl.char===0?'Scout!':'Fox!',life:48,col:'#FFFFFF'});}
     if(KP.atk){pl.attack();Music.sfx.atk();}
     if(KP.jump&&pl.jumpT===0){pl.startJump();Music.sfx.jump();}
@@ -1258,13 +1264,13 @@ const G={
     }
     if(KP.use&&this.interactDelay<=0){
       let acted=false;
-      if(!acted&&pl.dist(this.steph)<56){this.dlg={speaker:'Steph',lines:this.steph.lines,idx:0};this.state='dialogue';acted=true;}
+      if(this.steph&&!acted&&pl.dist(this.steph)<56){this.dlg={speaker:'Steph',lines:this.steph.lines,idx:0};this.state='dialogue';acted=true;}
       // Benny
-      if(!acted&&pl.dist(this.benny)<52){this.dlg={speaker:'Benny',lines:this.benny.lines,idx:0};this.state='dialogue';acted=true;}
+      if(this.benny&&!acted&&pl.dist(this.benny)<52){this.dlg={speaker:'Benny',lines:this.benny.lines,idx:0};this.state='dialogue';acted=true;}
       // Scoodles
-      if(!acted&&pl.dist(this.scoodles)<52){this.dlg={speaker:'Scoodles',lines:this.scoodles.lines,idx:0};this.state='dialogue';acted=true;}
+      if(this.scoodles&&!acted&&pl.dist(this.scoodles)<52){this.dlg={speaker:'Scoodles',lines:this.scoodles.lines,idx:0};this.state='dialogue';acted=true;}
       // Robert
-      if(!acted&&pl.dist(this.robert)<52){this.dlg={speaker:'Robert Garbins',lines:this.robert.lines,idx:0};this.state='dialogue';acted=true;}
+      if(this.robert&&!acted&&pl.dist(this.robert)<52){this.dlg={speaker:'Robert Garbins',lines:this.robert.lines,idx:0};this.state='dialogue';acted=true;}
       // Dad
       if(this.dad&&!acted&&pl.dist(this.dad)<60){
         if(!this.dad.found){this.dad.found=true;this.score+=500;this.fx.push({x:pl.cx,y:pl.cy-30,txt:'YOU FOUND DAD! +500',life:90,col:'#FFD060'});Music.sfx.dadFound();}
@@ -1372,6 +1378,7 @@ const G={
     if(this.state==='dialogue'&&this.dlg)drawDlg(this.dlg);
     if(this.state==='lore'&&this.loreDlg)drawLoreDlg(this.loreDlg);
     if(this.state==='over')drawOver();
+    if(this.state==='worldmap')drawWorldMap();
     if(this.stephOpen&&this.steph)drawStephPopup(this.getStephTip());
     // Level atmospheric overlays
     if(this.level===2){
@@ -1390,13 +1397,16 @@ const G={
       const a=Math.min(1,this.levelIntroTimer/40);
       ctx.fillStyle=`rgba(0,0,0,${0.78*a})`;ctx.fillRect(0,0,VW,VH);
       const lvlNames=['','Bridgeport','Jelly Bones Ghost Boy','Richardson Elementary','The Dojo','Purple Park','Haystack Rock',"Casey's"];
+      const lvlGoals=['','Follow the candy trail to find Dad','Collect all 4 mushrooms to complete the trail','Collect all 14 treats hidden in the school','Collect all 5 belts to earn your rank','Collect all 5 treats hidden in the park','Collect 5 beach treasures then find Dad','Find Dad at the counter'];
       ctx.globalAlpha=a;
       ctx.fillStyle='#FFD060';ctx.font=`700 13px ${F}`;ctx.textAlign='center';
-      ctx.fillText('Level '+this.level,VW/2,VH/2-24);
+      ctx.fillText('Level '+this.level,VW/2,VH/2-30);
       ctx.fillStyle='#FFFFFF';ctx.font=`700 26px ${F}`;
-      ctx.fillText(lvlNames[this.level]||'',VW/2,VH/2+6);
+      ctx.fillText(lvlNames[this.level]||'',VW/2,VH/2+4);
+      ctx.fillStyle='rgba(255,220,120,0.85)';ctx.font=`400 11px ${F}`;
+      ctx.fillText(lvlGoals[this.level]||'',VW/2,VH/2+24);
       ctx.fillStyle='rgba(255,255,255,0.4)';ctx.font=`400 10px ${F}`;
-      ctx.fillText('Press E to begin',VW/2,VH/2+32);
+      ctx.fillText('Press E to begin',VW/2,VH/2+42);
       ctx.globalAlpha=1;
     }
     // Level complete overlay
@@ -1505,11 +1515,13 @@ function drawHUD(){
   ctx.fillStyle='#fff';ctx.font=`800 15px ${F}`;
   ctx.fillText(String(G.score).padStart(5,'0'),VW/2,34);
 
-  // Clues + Dad status - right side
+  // Goal counter - right side, label changes per level
   const lc=G.lore.filter(l=>l.collected).length;
+  const goalLabels=['','Clues','Mushrooms','Belts','Treats','Treasures','Shells','Treats'];
+  const goalLabel=goalLabels[G.level]||'Clues';
   ctx.textAlign='right';
   ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font=`600 11px ${F}`;
-  ctx.fillText(`Clues  ${lc} / ${G.lore.length}`,VW-12,18);
+  ctx.fillText(`${goalLabel}  ${lc} / ${G.lore.length}`,VW-12,18);
   if(G.foundDad){
     ctx.fillStyle='#22c55e';ctx.font=`700 11px ${F}`;
     ctx.fillText('DAD FOUND  ♥',VW-12,32);
@@ -1569,6 +1581,109 @@ function drawOver(){
   ctx.fillText(`Score: ${G.score}`,VW/2,VH/2+44);
   ctx.fillStyle='rgba(255,255,255,0.9)';rr(VW/2-70,VH/2+58,140,34,17);ctx.fill();
   ctx.fillStyle='#111';ctx.font=`600 14px ${F}`;ctx.fillText('Try Again',VW/2,VH/2+80);
+}
+
+
+function drawWorldMap(){
+  const t=G.worldMapTimer||0;
+  // Background - night sky
+  ctx.fillStyle='#0a0820';ctx.fillRect(0,0,VW,VH);
+  // Stars
+  for(let i=0;i<80;i++){
+    const sx2=(Math.sin(i*73.1)*0.5+0.5)*VW,sy2=(Math.cos(i*41.7)*0.5+0.5)*VH;
+    const br=0.3+Math.sin(t*0.04+i)*0.2;
+    ctx.fillStyle=`rgba(255,255,255,${br})`;
+    ctx.beginPath();ctx.arc(sx2,sy2,0.7+Math.sin(i*5.3)*0.4,0,Math.PI*2);ctx.fill();
+  }
+  // Title
+  ctx.fillStyle='#FFD060';ctx.font=`700 22px ${F}`;ctx.textAlign='center';
+  ctx.fillText('Adventure Map',VW/2,44);
+  ctx.fillStyle='rgba(255,220,120,0.5)';ctx.font=`400 11px ${F}`;
+  ctx.fillText('Press E to continue',VW/2,64);
+
+  // Level node positions - zigzag like Mario World
+  const nodes=[
+    {x:110,y:140,n:1,name:'Bridgeport',     icon:'🏠',col:'#60d060'},
+    {x:240,y:140,n:2,name:'Ghost Hike',      icon:'👻',col:'#a060e0'},
+    {x:370,y:140,n:3,name:'Richardson',      icon:'🏫',col:'#60a0e0'},
+    {x:500,y:140,n:4,name:'The Dojo',        icon:'🥋',col:'#e06020'},
+    {x:500,y:260,n:5,name:'Purple Park',     icon:'🌸',col:'#e060c0'},
+    {x:370,y:260,n:6,name:'Haystack Rock',   icon:'🌊',col:'#20a0e0'},
+    {x:240,y:260,n:7,name:"Casey's",         icon:'⛽',col:'#e0a020'},
+  ];
+
+  // Draw connecting paths
+  ctx.setLineDash([6,4]);ctx.lineWidth=3;
+  for(let i=0;i<nodes.length-1;i++){
+    const a=nodes[i],b=nodes[i+1];
+    const cleared=G.clearedLevels.has(a.n);
+    const isNext=G.level===b.n;
+    ctx.strokeStyle=cleared?'#FFD06088':(isNext?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.1)');
+    ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Animated path progress for current transition
+  if(t<60){
+    const prevIdx=nodes.findIndex(n=>n.n===G.level)-1;
+    if(prevIdx>=0){
+      const a=nodes[prevIdx],b=nodes[prevIdx+1];
+      const prog=Math.min(1,t/50);
+      ctx.strokeStyle='#FFD060';ctx.lineWidth=4;
+      ctx.beginPath();ctx.moveTo(a.x,a.y);
+      ctx.lineTo(a.x+(b.x-a.x)*prog,a.y+(b.y-a.y)*prog);
+      ctx.stroke();
+    }
+  }
+
+  // Draw nodes
+  nodes.forEach(({x,y,n,name,icon,col})=>{
+    const cleared=G.clearedLevels.has(n);
+    const isCurrent=G.level===n;
+    const isLocked=n>G.level;
+    const pulse=Math.sin(t*0.08)*4;
+
+    // Outer glow for current
+    if(isCurrent){
+      ctx.fillStyle=`${col}33`;
+      ctx.beginPath();ctx.arc(x,y,32+pulse,0,Math.PI*2);ctx.fill();
+    }
+    // Node circle
+    ctx.fillStyle=isLocked?'#1a1830':cleared?col:isCurrent?col:'#2a2848';
+    ctx.beginPath();ctx.arc(x,y,24,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle=isCurrent?'#FFFFFF':cleared?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.1)';
+    ctx.lineWidth=isCurrent?3:1.5;
+    ctx.beginPath();ctx.arc(x,y,24,0,Math.PI*2);ctx.stroke();
+
+    // Icon or lock
+    ctx.font='18px serif';ctx.textAlign='center';
+    ctx.fillStyle=isLocked?'rgba(255,255,255,0.2)':'rgba(0,0,0,0.0)';
+    ctx.fillText(isLocked?'🔒':icon,x,y+7);
+
+    // Check stamp for cleared
+    if(cleared){
+      ctx.fillStyle='rgba(255,255,255,0.9)';ctx.font=`700 14px ${F}`;
+      ctx.fillText('✓',x,y+6);
+    }
+
+    // Name label
+    ctx.fillStyle=isLocked?'rgba(255,255,255,0.2)':isCurrent?'#FFFFFF':cleared?'rgba(255,255,255,0.7)':'rgba(255,255,255,0.4)';
+    ctx.font=`${isCurrent?'700':'500'} 11px ${F}`;ctx.textAlign='center';
+    ctx.fillText(name,x,y+42);
+
+    // Level number
+    ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font=`400 9px ${F}`;
+    ctx.fillText('Lv '+n,x,y+54);
+
+    // Current marker - bouncing character dot
+    if(isCurrent){
+      const bounce=Math.sin(t*0.1)*5;
+      ctx.fillStyle='#FFD060';
+      ctx.beginPath();ctx.arc(x,y-32-bounce,6,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle='#fff';ctx.font=`700 8px ${F}`;ctx.textAlign='center';
+      ctx.fillText('★',x,y-29-bounce);
+    }
+  });
 }
 
 function drawStephPopup(tip){
@@ -1720,7 +1835,7 @@ function setupLevel2(){
   G.npcs=[];
   G.scoodles=new JellyBonesGhost(27,3);
   G.robert=null;G.benny=null;G.dad=null;
-  G.steph=new StephNPC(27,42);
+  G.steph=new StephNPC(25,42);
   G.steph._lines=[
     '"You two be safe on this trail. And be nice to Jelly Bones!"',
     '"He is a friendly ghost. He just has an unusual lifestyle."',
@@ -1748,6 +1863,11 @@ function setupLevel3(){
   for(const x of [9,12,21,25,36,40,47,51]){setT(x,19,COBBLE);setT(x,21,COBBLE);}
   for(const y of [11,14,25,30]){setT(29,y,COBBLE);setT(31,y,COBBLE);}
   setT(29,37,COBBLE);setT(30,37,COBBLE);setT(31,37,COBBLE);
+  // Entrance - must come LAST to override rock walls
+  setT(29,37,COBBLE);setT(30,37,COBBLE);setT(31,37,COBBLE);
+  setT(29,38,PATH);setT(30,38,PATH);setT(31,38,PATH);
+  setT(29,39,PATH);setT(30,39,PATH);setT(31,39,PATH);
+  hln(22,36,16,PATH);
   setT(28,20,ROCK);setT(32,20,ROCK);
   G.npcs=[
     new NPC(10,12,'Mr. Berg','#1a2a4a','#c0d8f0',[
@@ -1762,14 +1882,14 @@ function setupLevel3(){
       '"He seemed very confident. I believed him."',
     ]),
     new NPC(37,12,'Mrs. Thompson','#3a1a1a','#f0c0b0',[
-      '"Mrs. Thompson! So happy you are here."',
-      '"Your dad hid one behind my stapler. I found it. Then I re-hid it for you."',
-      '"Check every corner. He was very thorough."',
+      '"Mrs. Thompson! Thatcher, so glad you are here! And you brought a friend!"',
+      '"Your dad came by and hid a treat behind my stapler. I found it and re-hid it for you."',
+      '"I am so proud of how you two are doing. Thatcher, keep it up!"',
     ]),
     new NPC(50,12,'Mrs. Godfrey','#1a3a1a','#b0f0c0',[
-      '"Mrs. Godfrey! Welcome!"',
-      '"Your dad left one on my desk. I may have eaten it. I am so sorry."',
-      '"There are still plenty left. Check the gym and the cafeteria!"',
+      '"Mrs. Godfrey! Eloise, it is so wonderful to see you! And this must be your brother!"',
+      '"Your dad left a treat on my desk. I may have eaten it. I am so truly sorry."',
+      '"Eloise, you are doing so wonderfully. Now go find the rest of those treats!"',
     ]),
     new NPC(40,30,'Ben','#2a3a5a','#f0e060',[
       '"Hey! I am Ben! Eloise knows me!"',
@@ -2092,6 +2212,16 @@ const Music=(()=>{
           const t=ctx.currentTime+i*0.09;
           g.gain.setValueAtTime(0.18,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.4);
           o.start(t);o.stop(t+0.5);
+        });
+      },
+      defeat(){
+        if(!ctx||muted)return;
+        [523,440,349].forEach((f,i)=>{
+          const o=ctx.createOscillator(),g=ctx.createGain();
+          o.connect(g);g.connect(master);o.type='square';o.frequency.value=f;
+          const t=ctx.currentTime+i*0.09;
+          g.gain.setValueAtTime(0.15,t);g.gain.exponentialRampToValueAtTime(0.001,t+0.14);
+          o.start(t);o.stop(t+0.14);
         });
       },
       chime(){
