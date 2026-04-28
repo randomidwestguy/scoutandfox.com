@@ -1639,7 +1639,7 @@ const G={
       const a=Math.min(1,this.levelIntroTimer/40);
       ctx.fillStyle=`rgba(0,0,0,${0.78*a})`;ctx.fillRect(0,0,VW,VH);
       const lvlNames=['','Bridgeport','Jelly Bones\nGhost Boy','Richardson Elementary','The Dojo',"Steph's House",'Purple Park','Haystack Rock',"Casey's"];
-      const lvlGoals=['','Follow the candy trail to find Dad','Collect all 4 mushrooms to complete the trail','Collect all 14 treats hidden in the school','Collect all 5 belts to earn your rank','Collect 8 treats for the sleepover!','Collect all 5 treats hidden in the park','Collect 5 beach treasures then find Dad','Find Dad at the counter'];
+      const lvlGoals=['','Follow the candy trail to find Dad','Collect all 4 mushrooms to complete the trail','Collect all 14 treats hidden in the school','Collect all 5 belts to earn your rank','Collect 8 treats for the sleepover!','Collect all 10 treats hidden in the park','Collect 5 beach treasures then find Dad','Find Dad at the counter'];
       ctx.globalAlpha=a;
       ctx.fillStyle='#FFD060';ctx.font=`700 13px ${F}`;ctx.textAlign='center';
       ctx.fillText('Level '+this.level,VW/2,VH/2-34);
@@ -1831,7 +1831,7 @@ function drawOver(){
 // ── Mario-style World Map ────────────────────────────
 const MAP_NODES=[
   {n:1, x:80,  y:380, name:'Bridgeport'},
-  {n:2, x:200, y:280, name:'Ghost Boy'},
+  {n:2, x:200, y:280, name:'Jelly Bones Ghost Boy'},
   {n:3, x:340, y:340, name:'Richardson'},
   {n:4, x:480, y:240, name:'The Dojo'},
   {n:5, x:620, y:320, name:"Steph's"},
@@ -1862,10 +1862,11 @@ function drawWorldMap(){
   // ── SKY TILES ────────────────────────────────────────
   ctx.fillStyle=MT.SKY;ctx.fillRect(0,0,VW,VH);
 
-  // Cloud tiles (static positions)
-  [[60,40],[200,28],[380,50],[520,30],[680,45],[140,80],[450,72],[620,88]].forEach(([cx,cy])=>{
+  // Cloud tiles (floating - different speeds per cloud)
+  [[60,40,0.3],[200,28,0.18],[380,50,0.24],[520,30,0.15],[680,45,0.28],[140,80,0.2],[450,72,0.22],[620,88,0.16]].forEach(([cx,cy,spd])=>{
+    const fx=((cx + t*spd)%(VW+80))-40;
     ctx.fillStyle=MT.CLOUD;
-    ctx.fillRect(cx,cy,32,16);ctx.fillRect(cx+8,cy-8,24,12);ctx.fillRect(cx-4,cy+4,16,10);
+    ctx.fillRect(fx,cy,32,16);ctx.fillRect(fx+8,cy-8,24,12);ctx.fillRect(fx-4,cy+4,16,10);
   });
 
   // ── GROUND TILES (bottom half) ───────────────────────
@@ -2403,13 +2404,18 @@ function setupLevel6(){
   // Flower border
   for(let x=5;x<55;x+=4)setT(x,11,FLOWER);
   G.lore=[
-    new LoreItem(19,16,'Lollipop', '"Right on the big grassy oval! Dad probably rolled down it first."',   'lollipop'),
-    new LoreItem(24,28,'Gummy Bear','"On the playground. He says he went down the slide. I believe him."',  'gummy'),
-    new LoreItem(48,17,'Jawbreaker','"By the splash pad. He was definitely watching the ducks."',           'jawbreaker'),
-    new LoreItem(36,30,'Chocolate', '"Inside the pavilion. He says this is his favorite spot to sit."',     'chocolate'),
-    new LoreItem(10,22,'Taffy',     '"Near the oval lawn path. Left it right by the tallest tree."',        'taffy'),
+    new LoreItem(19,16,'Lollipop',   '"Right on the big grassy oval! Dad probably rolled down it first."',        'lollipop'),
+    new LoreItem(24,28,'Gummy Bear', '"On the playground. He says he went down the slide. I believe him."',       'gummy'),
+    new LoreItem(44,18,'Jawbreaker', '"Right next to the splash pad. He was definitely watching the ducks."',     'jawbreaker'),
+    new LoreItem(33,26,'Chocolate',  '"Just outside the pavilion. His favorite spot to sit."',                    'chocolate'),
+    new LoreItem(10,22,'Taffy',      '"Near the oval lawn path. Left it right by the tallest tree."',             'taffy'),
+    new LoreItem(20,12,'Candy Corn', '"Along the flower border. Hard to spot among all the blooms."',             'candycorn'),
+    new LoreItem(40,14,'Gumball',    '"On the cobblestone path near the fountain. Very sneaky placement."',       'gumball'),
+    new LoreItem(27,35,'Hard Candy', '"Deep in the playground mulch. You have to really dig around for this one."','hardcandy'),
+    new LoreItem(16,38,'Lollipop',   '"All the way at the back of the park. Worth the walk!"',                    'lollipop'),
+    new LoreItem(48,30,'Taffy',      '"By the far east path. Dad said he almost forgot to leave this one."',      'taffy'),
   ];
-  G.enemies=[new Enemy(20,20,0),new Enemy(42,22,3),new Enemy(10,32,0)];
+  G.enemies=[];
   G.crackers=[new HealthPack(20,28),new HealthPack(44,30)];
   G.npcs=[];
   G.steph=new StephNPC(28,16);
