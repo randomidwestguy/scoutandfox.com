@@ -1772,8 +1772,18 @@ function drawHUD(){
     ctx.fillStyle='#22c55e';ctx.font=`700 11px ${F}`;
     ctx.fillText('DAD FOUND  ♥',VW-12,32);
   }else{
-    ctx.fillStyle='rgba(255,255,255,0.22)';ctx.font=`400 10px ${F}`;
-    ctx.fillText(`Q·Steph  Z·jump  SPACE·atk  M:${typeof Music!=='undefined'&&Music.muted?'off':'♪'}`,VW-12,32);
+    const hints=[['E','Talk'],['SPACE','Attack'],['Z','Jump'],['P','Grab'],['TAB','Swap'],['Q','Steph'],['R','Restart'],['M',Music.muted?'off':'♪']];
+    let hx=VW-8;
+    ctx.textAlign='right';
+    hints.slice().reverse().forEach(([key,lbl])=>{
+      ctx.font=`400 9px ${F}`;
+      const kw=ctx.measureText(key).width;const lw=ctx.measureText(lbl).width;
+      const pw=kw+lw+14;
+      ctx.fillStyle='rgba(0,0,0,0.35)';rr(hx-pw,21,pw,13,3);ctx.fill();
+      ctx.fillStyle='rgba(255,220,60,0.9)';ctx.font=`700 9px ${F}`;ctx.fillText(key,hx-pw+4+kw,31);
+      ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font=`400 9px ${F}`;ctx.fillText(lbl,hx-4,31);
+      hx-=pw+3;
+    });
   }
 }
 
