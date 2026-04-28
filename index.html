@@ -1219,7 +1219,7 @@ const G={
   completedLevel(){
     const prevLevel=this.level;
     this.clearedLevels.add(this.level);
-    if(this.level<8){this.level++;this.state='worldmap';this.worldMapTimer=0;initMapWalk(prevLevel,this.level);}
+    if(this.level<9){this.level++;this.state='worldmap';this.worldMapTimer=0;initMapWalk(prevLevel,this.level);}
     else{this.state='gameend';}
   },
   loadLevel(n){
@@ -1268,6 +1268,7 @@ const G={
     else if(n===6)setupLevel6();
     else if(n===7)setupLevel7();
     else if(n===8)setupLevel8();
+    else if(n===9)setupLevel9();
     this.interactDelay=30;
     this.state='levelintro';
     this.levelIntroTimer=180;
@@ -1436,7 +1437,7 @@ const G={
       // Dad
       if(this.dad&&!acted&&pl.dist(this.dad)<60){
         if(!this.dad.found){this.dad.found=true;this.score+=500;this.fx.push({x:pl.cx,y:pl.cy-30,txt:'YOU FOUND DAD! +500',life:90,col:'#FFD060'});Music.sfx.dadFound();}
-        this.dlg={speaker:'Dad',lines:this.dad.lines,idx:0,onDone:this.level===8?'gameend':'levelcomplete'};this.state='dialogue';acted=true;
+        this.dlg={speaker:'Dad',lines:this.dad.lines,idx:0,onDone:this.level===9?'gameend':'levelcomplete'};this.state='dialogue';acted=true;
       }
       for(const n of this.npcs){if(!acted&&pl.dist(n)<56){
         const onDone=n.name==='Mrs. Vaughn'?'spawnMoose':undefined;
@@ -1489,7 +1490,7 @@ const G={
         this.fx.push({x:mx,y:my-20,txt:'woof!',life:70,col:'#f0c0ff'});
       }
     }
-    if(this.level>=2&&this.level<=6&&this.lore.length>0&&this.lore.every(l=>l.collected)&&this.state==='play')
+    if(this.level>=2&&this.level<=7&&this.lore.length>0&&this.lore.every(l=>l.collected)&&this.state==='play')
       this.state='levelcomplete';
     this.lore.forEach(l=>l.update());
     this.crackers.forEach(cr=>cr.update());
@@ -1633,13 +1634,14 @@ const G={
         ctx.fillStyle=fg;ctx.fillRect(0,0,VW,VH);
       }
     }else if(this.level===5){ctx.fillStyle='rgba(255,190,80,0.07)';ctx.fillRect(0,0,VW,VH);}
-    else if(this.level===8){ctx.fillStyle='rgba(255,140,40,0.1)';ctx.fillRect(0,0,VW,VH);}
+    else if(this.level===8){ctx.fillStyle='rgba(255,240,200,0.07)';ctx.fillRect(0,0,VW,VH);}
+    else if(this.level===9){ctx.fillStyle='rgba(255,140,40,0.1)';ctx.fillRect(0,0,VW,VH);}
     // Level intro overlay (drawn on top of world)
     if(this.state==='levelintro'){
       const a=Math.min(1,this.levelIntroTimer/40);
       ctx.fillStyle=`rgba(0,0,0,${0.78*a})`;ctx.fillRect(0,0,VW,VH);
-      const lvlNames=['','Bridgeport','Jelly Bones\nGhost Boy','Richardson Elementary','The Dojo',"Steph's House",'Purple Park','Haystack Rock',"Casey's"];
-      const lvlGoals=['','Follow the candy trail to find Dad','Collect all 4 mushrooms to complete the trail','Collect all 14 treats hidden in the school','Collect all 5 belts to earn your rank','Collect 8 treats for the sleepover!','Collect all 10 treats hidden in the park','Collect 5 beach treasures then find Dad','Find Dad at the counter'];
+      const lvlNames=['','Bridgeport','Jelly Bones\nGhost Boy','School','The Dojo',"Steph's House",'Purple Park','Haystack Rock','HyVee',"Casey's"];
+      const lvlGoals=['','Follow the candy trail to find Dad','Collect all 4 mushrooms to complete the trail','Collect all 14 treats hidden in the school','Collect all 5 belts to earn your rank','Collect 8 treats for the sleepover!','Collect all 10 treats hidden in the park','Collect 5 beach treasures then find Dad','Find the perfect Friday Movie Night treat!','Find Dad at the counter'];
       ctx.globalAlpha=a;
       ctx.fillStyle='#FFD060';ctx.font=`700 13px ${F}`;ctx.textAlign='center';
       ctx.fillText('Level '+this.level,VW/2,VH/2-34);
@@ -1761,8 +1763,8 @@ function drawHUD(){
 
   // Goal counter - right side, label changes per level
   const lc=G.lore.filter(l=>l.collected).length;
-  const goalLabels=['','Clues','Mushrooms','Belts','Treats','Treasures','Shells','Treats'];
-  const goalLabel=goalLabels[G.level]||'Clues';
+  const goalLabels=['','Clues','Mushrooms','Treats','Belts','Treats','Treats','Treasures','Treats','Treats'];
+  const goalLabel=goalLabels[G.level]||'Treats';
   ctx.textAlign='right';
   ctx.fillStyle='rgba(255,255,255,0.5)';ctx.font=`600 11px ${F}`;
   ctx.fillText(`${goalLabel}  ${lc} / ${G.lore.length}`,VW-12,18);
@@ -1830,16 +1832,17 @@ function drawOver(){
 
 // ── Mario-style World Map ────────────────────────────
 const MAP_NODES=[
-  {n:1, x:80,  y:380, name:'Bridgeport'},
-  {n:2, x:200, y:280, name:'Jelly Bones Ghost Boy'},
-  {n:3, x:340, y:340, name:'Richardson'},
-  {n:4, x:480, y:240, name:'The Dojo'},
-  {n:5, x:620, y:320, name:"Steph's"},
-  {n:6, x:560, y:420, name:'Purple Park'},
-  {n:7, x:400, y:460, name:'Haystack'},
-  {n:8, x:220, y:420, name:"Casey's"},
+  {n:1, x:80,  y:220, name:'Bridgeport'},
+  {n:2, x:210, y:220, name:'Jelly Bones Ghost Boy'},
+  {n:3, x:340, y:220, name:'School'},
+  {n:4, x:470, y:220, name:'The Dojo'},
+  {n:5, x:620, y:220, name:"Steph's House"},
+  {n:6, x:700, y:400, name:'Purple Park'},
+  {n:7, x:560, y:400, name:'Haystack Rock'},
+  {n:8, x:400, y:400, name:'HyVee'},
+  {n:9, x:230, y:400, name:"Casey's"},
 ];
-const MAP_EDGES=[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]];
+const MAP_EDGES=[[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9]];
 let mapCursor=1;
 function initMapWalk(f,t){mapCursor=t;}
 function canMoveTo(n){return n>=1&&n<=G.level;}
@@ -1870,45 +1873,38 @@ function drawWorldMap(){
   });
 
   // ── GROUND TILES (bottom half) ───────────────────────
-  // Main ground plane
-  ctx.fillStyle=MT.GROUND;ctx.fillRect(0,200,VW,VH-200);
-  ctx.fillStyle=MT.DARK;ctx.fillRect(0,200,VW,8); // ground edge
+  // Main ground plane starts at y=310 to give room for top row labels
+  ctx.fillStyle=MT.GROUND;ctx.fillRect(0,310,VW,VH-310);
+  ctx.fillStyle=MT.DARK;ctx.fillRect(0,310,VW,8);
   // Checkerboard grass variation
   for(let gx=0;gx<VW;gx+=32){
-    for(let gy=216;gy<VH;gy+=32){
-      if((gx+gy)/32%2===0){
-        ctx.fillStyle='rgba(0,0,0,0.06)';ctx.fillRect(gx,gy,32,32);
-      }
+    for(let gy=318;gy<VH;gy+=32){
+      if((gx+gy)/32%2===0){ctx.fillStyle='rgba(0,0,0,0.06)';ctx.fillRect(gx,gy,32,32);}
     }
   }
 
   // ── HILLS ────────────────────────────────────────────
-  [[120,200,80,50],[300,200,100,60],[580,200,90,55],[720,200,70,45]].forEach(([hx,hy,hw,hh])=>{
-    ctx.fillStyle=MT.HILL;
-    ctx.beginPath();ctx.arc(hx,hy,hw,Math.PI,0);ctx.fill();
+  [[140,312,90,55],[310,312,110,65],[490,312,95,58],[680,312,80,50]].forEach(([hx,hy,hw,hh])=>{
+    ctx.fillStyle=MT.HILL;ctx.beginPath();ctx.arc(hx,hy,hw,Math.PI,0);ctx.fill();
     ctx.fillStyle=MT.HILLD;ctx.fillRect(hx-hw,hy-4,hw*2,8);
-    // Dots on hills
     ctx.fillStyle='rgba(100,200,40,0.5)';
-    ctx.beginPath();ctx.arc(hx-20,hy-20,10,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(hx+15,hy-15,8,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(hx-20,hy-22,10,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(hx+18,hy-18,8,0,Math.PI*2);ctx.fill();
   });
 
   // ── TREES ────────────────────────────────────────────
-  [[170,185],[250,178],[440,188],[500,180],[650,182],[700,190],[50,192],[760,186]].forEach(([tx,ty])=>{
-    ctx.fillStyle=MT.TREE;ctx.fillRect(tx+6,ty+20,6,12); // trunk
-    ctx.fillStyle=MT.TREEC;ctx.fillRect(tx,ty+8,18,16);   // mid
-    ctx.fillRect(tx+3,ty,12,12);                            // top
-    ctx.fillStyle=MT.TREEL;ctx.fillRect(tx+3,ty,6,6);      // highlight
+  [[55,296],[175,290],[285,295],[385,292],[505,294],[595,290],[720,296],[760,292]].forEach(([tx,ty])=>{
+    ctx.fillStyle=MT.TREE;ctx.fillRect(tx+6,ty+20,6,12);
+    ctx.fillStyle=MT.TREEC;ctx.fillRect(tx,ty+8,18,16);ctx.fillRect(tx+3,ty,12,12);
+    ctx.fillStyle=MT.TREEL;ctx.fillRect(tx+3,ty,6,6);
   });
 
   // ── WATER ────────────────────────────────────────────
-  // Pond bottom left
-  ctx.fillStyle=MT.WATER;ctx.fillRect(0,380,100,VH-380);
+  ctx.fillStyle=MT.WATER;ctx.fillRect(0,380,60,VH-380);
   ctx.fillStyle=MT.WATERL;
-  for(let wx=4;wx<96;wx+=20){ctx.fillRect(wx,390,14,4);ctx.fillRect(wx+8,402,10,3);}
-  // Pipe near pond
-  ctx.fillStyle=MT.PIPE;ctx.fillRect(88,360,16,24);
-  ctx.fillStyle=MT.PIPED;ctx.fillRect(85,355,22,10);
+  for(let wx=4;wx<56;wx+=20){ctx.fillRect(wx,390,14,4);ctx.fillRect(wx+8,402,10,3);}
+  ctx.fillStyle=MT.PIPE;ctx.fillRect(50,355,16,28);
+  ctx.fillStyle=MT.PIPED;ctx.fillRect(47,350,22,10);
 
   // ── PATHS ────────────────────────────────────────────
   MAP_EDGES.forEach(([a,b],i)=>{
@@ -1973,13 +1969,14 @@ function drawWorldMap(){
       ctx.strokeStyle='#800000';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.moveTo(x,y-nr-8-bounce);ctx.lineTo(x-8,y-nr-20-bounce);ctx.lineTo(x+8,y-nr-20-bounce);ctx.closePath();ctx.stroke();
     }
-    // Name label - simple solid box
+    // Name label - above for top row (y<310), below for bottom row
+    const isTopRow=node.y<310;
     ctx.font=`700 9px monospace`;ctx.textAlign='center';
     const lw=node.name.length*6+10;
-    const ly=y+nr+6;
+    const ly=isTopRow?y-nr-16:y+nr+6;
     ctx.fillStyle='rgba(0,0,0,0.7)';ctx.fillRect(x-lw/2+1,ly+1,lw,13);
-    ctx.fillStyle=isLocked?'#606068':isCursor?'#f8f030':cleared?'#f8c820':'#f8f8f0';
-    ctx.fillRect(x-lw/2,ly,lw,13);
+    const nc2=isLocked?'#606068':isCursor?'#f8f030':cleared?'#f8c820':'#f8f8f0';
+    ctx.fillStyle=nc2;ctx.fillRect(x-lw/2,ly,lw,13);
     ctx.fillStyle=isLocked?'#202028':'#181808';
     ctx.fillText(node.name,x,ly+10);
   });
@@ -2462,7 +2459,6 @@ function setupLevel7(){
   G.dad.lines=[
     '"THERE you are! Best beach on earth. I have been here the whole time."',
     '"I drove the cart down. The wheels really did not love the sand."',
-    '"Look at that rock. We are coming back every summer. Just us. That is a promise."',
     '"Okay. One more stop. You know exactly where we are going."',
   ];
   G.scoodles=new ScoodlesNPC(30,38);
@@ -2472,7 +2468,141 @@ function setupLevel7(){
 }
 
 // ── Level 6: Casey's ──────────────────────────────────
+// ── Level 8: HyVee ────────────────────────────────────
 function setupLevel8(){
+  // Outer grass border
+  fillR(1,1,MW-2,MH-2,GRASS);
+  // Parking lot surrounds
+  fillR(1,1,MW-2,3,PATH);
+  fillR(1,MH-4,MW-2,3,COBBLE);
+  fillR(1,1,2,MH-2,PATH);
+  fillR(MW-3,1,2,MH-2,PATH);
+  // Parking spaces (rock stripes)
+  for(let px=4;px<MW-4;px+=5){setT(px,2,ROCK);}
+  for(let px=4;px<MW-4;px+=5){setT(px,MH-4,ROCK);}
+
+  // Store outer walls
+  fillR(4,4,MW-8,MH-10,ROCK);
+  // Store floor (cobblestone = shiny floor)
+  fillR(5,5,MW-10,MH-12,COBBLE);
+
+  // ── CHECKOUT / ENTRANCE ───────────────────────────────
+  // Entry doors (south) - clear path
+  fillR(24,MH-10,12,2,PATH);
+  // Checkout counters (rock blocks near entrance)
+  fillR(8,MH-12,4,3,ROCK);fillR(14,MH-12,4,3,ROCK);
+  fillR(20,MH-12,4,3,ROCK);fillR(34,MH-12,4,3,ROCK);
+  fillR(40,MH-12,4,3,ROCK);fillR(46,MH-12,4,3,ROCK);
+
+  // ── PRODUCE SECTION (northwest) ───────────────────────
+  fillR(5,5,16,10,GRASS);    // produce floor green
+  fillR(6,6,7,4,FLOWER);     // fruit/veg display 1
+  fillR(14,6,6,4,FLOWER);    // fruit/veg display 2
+  fillR(6,11,7,3,FLOWER);    // fruit/veg display 3
+  fillR(14,11,5,3,FLOWER);   // fruit/veg display 4
+  // Produce bins (rock outlines)
+  fillR(6,6,7,1,ROCK);fillR(6,6,1,4,ROCK);fillR(12,6,1,4,ROCK);
+  fillR(14,6,6,1,ROCK);fillR(14,6,1,4,ROCK);fillR(19,6,1,4,ROCK);
+  fillR(6,11,7,1,ROCK);fillR(6,11,1,3,ROCK);fillR(12,11,1,3,ROCK);
+
+  // ── BAKERY CORNER (northeast) ─────────────────────────
+  fillR(MW-14,5,9,10,SAND);
+  fillR(MW-13,6,4,4,HOUSE);   // bakery counter
+  fillR(MW-8,6,3,4,HOUSE);
+
+  // ── AISLES (6 aisles running north-south) ─────────────
+  // Aisle shelves are ROCK, walkable aisle space is COBBLE
+  // Each aisle: 2 shelf rows with 2-tile gap between
+  const aisleX=[7,14,21,28,35,42];
+  for(const ax of aisleX){
+    fillR(ax,17,3,18,ROCK);   // west shelf
+    fillR(ax+4,17,3,18,ROCK); // east shelf
+    // shelf highlights (sand on top edge)
+    hln(ax,17,3,SAND);
+    hln(ax+4,17,3,SAND);
+  }
+  // Cross aisle (main horizontal path at row 20)
+  fillR(5,22,MW-10,2,COBBLE);
+
+  // ── FROZEN FOOD SECTION (east wall) ───────────────────
+  fillR(MW-12,17,7,18,WATER);  // cold blue cases
+  fillR(MW-11,18,5,16,COBBLE); // walkable inside
+  // Freezer doors every 3 tiles
+  for(let fy=18;fy<34;fy+=3){setT(MW-12,fy,ROCK);setT(MW-12,fy+1,COBBLE);}
+
+  // ── CART STAGING (near entrance) ─────────────────────
+  // Shopping carts are decorative ROCK tiles near entrance
+  for(const cx of [9,12,46,49]){
+    setT(cx,MH-11,ROCK);
+  }
+
+  // ── PLAYER START (store entrance) ─────────────────────
+  G.player.wx=30*TS+5;G.player.wy=(MH-11)*TS+5;
+  G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
+
+  // ── NPCs ──────────────────────────────────────────────
+  G.steph=new StephNPC(26,MH-13);
+  G.steph._lines=[
+    '"HyVee! Friday Movie Night starts in an hour."',
+    '"You two get to pick ONE treat each. Something good."',
+    '"Check the snack aisle, the candy section, and the bakery."',
+    '"I will be here. Press Q anytime."',
+  ];
+  G.dad=new DadNPC(34,MH-13);
+  G.dad.lines=[
+    '"Friday Movie Night! Best night of the week."',
+    '"I already know what I am getting. Popcorn. Every time."',
+    '"You two wander around. The good stuff is scattered all over the store."',
+    '"Take your time. We have got a whole movie to get ready for."',
+  ];
+  G.dad.found=false;
+  G.benny=new BennyDog(20,MH-13);
+  G.scoodles=new ScoodlesNPC(38,MH-13);
+  G.scoodles._intro='"I am allowed in here. I have a vest. Do not ask about the vest."';
+  G.robert=null;
+
+  G.npcs=[
+    new NPC(8,10,'Produce Guy','#206010','#f0e060',[
+      '"Welcome to produce! Best fruits in town."',
+      '"We just got strawberries in. Your dad already bought two cartons."',
+      '"The bananas are over there. I am not sure why you would want bananas for movie night but I support you."',
+    ]),
+    new NPC(MW-10,8,'Baker','#f8d0a0','#f8f0e0',[
+      '"Bakery is open! Cookies, brownies, fresh bread."',
+      '"Your dad asked if we had a cake that said Friday Movie Night on it."',
+      '"We did not. But I respect the vision."',
+    ]),
+  ];
+
+  // ── LORE ITEMS — scattered around the store ───────────
+  G.lore=[
+    new LoreItem(8,19, 'Popcorn',       '"In the snack aisle! Classic movie night pick."',                   'candycorn'),
+    new LoreItem(15,25,'Gummy Bears',   '"Center aisle! A timeless choice."',                                'gummy'),
+    new LoreItem(22,19,'Chocolate Bar', '"In the candy section. Dark chocolate. Fancy."',                    'chocolate'),
+    new LoreItem(29,25,'Sour Worms',    '"Sour candy aisle. Thatcher, this one has your name on it."',       'gummy'),
+    new LoreItem(36,19,'Lollipop',      '"Near the checkout. Dad says Eloise always grabs one of these."',   'lollipop'),
+    new LoreItem(43,25,'Jawbreaker',    '"All the way at the back of the snack aisle."',                     'jawbreaker'),
+    new LoreItem(MW-9,20,'Frozen Pizza','"Frozen food section! Dad says absolutely not for movie night."',   'hardcandy'),
+    new LoreItem(MW-9,26,'Ice Cream',   '"Frozen food section! Dad says yes, obviously yes to ice cream."',  'chocolate'),
+    new LoreItem(8,8,  'Strawberries',  '"Fresh from produce! Sweet and perfect."',                          'gumball'),
+    new LoreItem(MW-7,8,'Brownie',      '"From the bakery! Still warm. The baker is very proud."',           'taffy'),
+    new LoreItem(22,25,'Chips',         '"Family size chips. For a family movie. It checks out."',           'hardcandy'),
+    new LoreItem(36,25,'Candy Corn',    '"Seasonal! Dad always buys candy corn no matter what month it is."','candycorn'),
+  ];
+
+  G.enemies=[
+    new Enemy(15,19,1),  // Rogue cart
+    new Enemy(29,19,3),  // Stockroom ghost
+    new Enemy(43,19,0),  // Aisle 6 wanderer
+    new Enemy(22,28,2),  // Frozen food fiend
+  ];
+
+  G.crackers=[new HealthPack(8,23),new HealthPack(45,23),new HealthPack(30,10)];
+  G.trampoline=null;
+}
+
+
+function setupLevel9(){
   fillR(1,1,MW-2,MH-2,GRASS);
   fillR(40,1,12,MH-2,PATH);
   hln(1,36,58,PATH);
