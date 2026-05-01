@@ -2470,7 +2470,7 @@ function setupLevel7(){
     new LoreItem(22,14,'Puffin Feather','"All the way at the rock! A puffin flew right over. Thatcher saw it first."','chocolate'),
     new LoreItem(23,5, 'Sea Glass',     '"Smooth green glass, tumbled by the ocean for years. Beautiful."',         'jawbreaker'),
   ];
-  G.enemies=[new Enemy(26,34,2),new Enemy(28,24,2),new Enemy(24,12,3)];
+  G.enemies=[];
   G.crackers=[new HealthPack(27,38),new HealthPack(25,18)];
   G.npcs=[];
   G.benny=new BennyDog(28,38);
@@ -2629,12 +2629,7 @@ function setupLevel8(){
     new LoreItem(MW-7,22,'Frozen Pizza','"Dad says absolutely not for movie night. But you found it!"',      'hardcandy'),
   ];
 
-  G.enemies=[
-    new Enemy(9,14,1),   // aisle 1 wanderer
-    new Enemy(27,14,3),  // aisle 3 roamer
-    new Enemy(45,18,0),  // back aisle guard
-    new Enemy(18,24,2),  // center aisle patrol
-  ];
+  G.enemies=[];
 
   G.crackers=[new HealthPack(9,20),new HealthPack(36,20),new HealthPack(MW-7,20)];
   G.trampoline=null;
