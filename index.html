@@ -2489,134 +2489,154 @@ function setupLevel7(){
 // ── Level 6: Casey's ──────────────────────────────────
 // ── Level 8: HyVee ────────────────────────────────────
 function setupLevel8(){
-  // Outer grass border
-  fillR(1,1,MW-2,MH-2,GRASS);
-  // Parking lot surrounds
-  fillR(1,1,MW-2,3,PATH);
-  fillR(1,MH-4,MW-2,3,COBBLE);
-  fillR(1,1,2,MH-2,PATH);
-  fillR(MW-3,1,2,MH-2,PATH);
-  // Parking spaces (rock stripes)
-  for(let px=4;px<MW-4;px+=5){setT(px,2,ROCK);}
-  for(let px=4;px<MW-4;px+=5){setT(px,MH-4,ROCK);}
+  // ── EXTERIOR ─────────────────────────────────────────
+  fillR(0,0,MW,MH,GRASS);
+  fillR(0,0,MW,3,PATH);            // parking lot north
+  fillR(0,MH-4,MW,4,PATH);         // parking lot south
+  fillR(0,0,2,MH,PATH);            // parking lot west
+  fillR(MW-2,0,2,MH,PATH);         // parking lot east
+  // Parking space lines
+  for(let px=3;px<MW-3;px+=5)setT(px,2,COBBLE);
+  for(let px=3;px<MW-3;px+=5)setT(px,MH-4,COBBLE);
 
-  // Store outer walls
-  fillR(4,4,MW-8,MH-10,ROCK);
-  // Store floor (cobblestone = shiny floor)
-  fillR(5,5,MW-10,MH-12,COBBLE);
+  // ── STORE SHELL ───────────────────────────────────────
+  // Outer walls
+  fillR(3,3,MW-6,MH-7,ROCK);
+  // Store floor — SAND (bright warm tile floor)
+  fillR(4,4,MW-8,MH-9,SAND);
 
-  // ── CHECKOUT / ENTRANCE ───────────────────────────────
-  // Entry doors (south) - clear path
-  fillR(24,MH-10,12,2,PATH);
-  // Checkout counters (rock blocks near entrance)
-  fillR(8,MH-12,4,3,ROCK);fillR(14,MH-12,4,3,ROCK);
-  fillR(20,MH-12,4,3,ROCK);fillR(34,MH-12,4,3,ROCK);
-  fillR(40,MH-12,4,3,ROCK);fillR(46,MH-12,4,3,ROCK);
+  // Entrance doors (south wall gap)
+  fillR(25,MH-7,10,2,PATH);
 
-  // ── PRODUCE SECTION (northwest) ───────────────────────
-  fillR(5,5,16,10,GRASS);    // produce floor green
-  fillR(6,6,7,4,FLOWER);     // fruit/veg display 1
-  fillR(14,6,6,4,FLOWER);    // fruit/veg display 2
-  fillR(6,11,7,3,FLOWER);    // fruit/veg display 3
-  fillR(14,11,5,3,FLOWER);   // fruit/veg display 4
-  // Produce bins (rock outlines)
-  fillR(6,6,7,1,ROCK);fillR(6,6,1,4,ROCK);fillR(12,6,1,4,ROCK);
-  fillR(14,6,6,1,ROCK);fillR(14,6,1,4,ROCK);fillR(19,6,1,4,ROCK);
-  fillR(6,11,7,1,ROCK);fillR(6,11,1,3,ROCK);fillR(12,11,1,3,ROCK);
-
-  // ── BAKERY CORNER (northeast) ─────────────────────────
-  fillR(MW-14,5,9,10,SAND);
-  fillR(MW-13,6,4,4,HOUSE);   // bakery counter
-  fillR(MW-8,6,3,4,HOUSE);
-
-  // ── AISLES (6 aisles running north-south) ─────────────
-  // Aisle shelves are ROCK, walkable aisle space is COBBLE
-  // Each aisle: 2 shelf rows with 2-tile gap between
-  const aisleX=[7,14,21,28,35,42];
-  for(const ax of aisleX){
-    fillR(ax,17,3,18,ROCK);   // west shelf
-    fillR(ax+4,17,3,18,ROCK); // east shelf
-    // shelf highlights (sand on top edge)
-    hln(ax,17,3,SAND);
-    hln(ax+4,17,3,SAND);
+  // ── CHECKOUT LANE AREA ───────────────────────────────
+  // Row of checkout counters just inside entrance
+  fillR(4,MH-10,MW-8,3,COBBLE);    // checkout floor strip
+  for(let cx=5;cx<MW-8;cx+=7){
+    fillR(cx,MH-10,4,2,ROCK);      // counter block
+    setT(cx+2,MH-9,SAND);          // gap in each counter (walkable lane)
   }
-  // Cross aisle (main horizontal path at row 20)
-  fillR(5,22,MW-10,2,COBBLE);
+  // Back wall of checkout area
+  hln(4,MH-11,MW-8,ROCK);
+  // Openings into store
+  for(let ox=7;ox<MW-8;ox+=7)setT(ox,MH-11,SAND);
 
-  // ── FROZEN FOOD SECTION (east wall) ───────────────────
-  fillR(MW-12,17,7,18,WATER);  // cold blue cases
-  fillR(MW-11,18,5,16,COBBLE); // walkable inside
-  // Freezer doors every 3 tiles
-  for(let fy=18;fy<34;fy+=3){setT(MW-12,fy,ROCK);setT(MW-12,fy+1,COBBLE);}
+  // ── PRODUCE SECTION (northwest, green floor) ─────────
+  fillR(4,4,14,12,GRASS);
+  // Produce bins — 3 bins of flower tiles
+  fillR(5,5,5,4,FLOWER);   // bin 1
+  fillR(11,5,5,4,FLOWER);  // bin 2
+  fillR(5,10,5,3,FLOWER);  // bin 3
+  fillR(11,10,5,3,FLOWER); // bin 4
+  // Bin borders
+  hln(5,5,5,ROCK);hln(11,5,5,ROCK);
+  hln(5,10,5,ROCK);hln(11,10,5,ROCK);
+  // Walkway through produce
+  vln(10,5,9,GRASS);
 
-  // ── CART STAGING (near entrance) ─────────────────────
-  // Shopping carts are decorative ROCK tiles near entrance
-  for(const cx of [9,12,46,49]){
-    setT(cx,MH-11,ROCK);
+  // ── BAKERY CORNER (northeast, warm sand) ──────────────
+  fillR(MW-18,4,14,12,COBBLE);
+  fillR(MW-17,5,5,4,HOUSE);   // oven/counter
+  fillR(MW-11,5,5,4,HOUSE);   // display case
+  fillR(MW-17,10,12,3,SAND);  // bakery floor walkway
+
+  // ── DELI / HOT FOODS (north center) ───────────────────
+  fillR(19,4,20,8,COBBLE);
+  fillR(20,5,8,4,ROCK);        // hot case left
+  fillR(29,5,8,4,ROCK);        // hot case right
+  hln(20,5,8,SAND);hln(29,5,8,SAND); // counter top highlights
+  fillR(20,9,18,2,SAND);       // walk area
+
+  // ── MAIN STORE FLOOR — 5 AISLES east-west ─────────────
+  // Each aisle: 3 shelf tiles | 3 walk tiles | 3 shelf tiles
+  // Aisles run east-west, walking north-south between them
+  const aisleRows=[13,16,19,22,25,28];
+  for(const ay of aisleRows){
+    fillR(4,ay,MW-8,2,ROCK);       // shelf row
+    hln(4,ay,MW-8,COBBLE);         // top edge walkable
   }
 
-  // ── PLAYER START (store entrance) ─────────────────────
-  G.player.wx=30*TS+5;G.player.wy=(MH-11)*TS+5;
+  // Main walk corridors (north-south between shelves)
+  // Every 6 columns, a north-south corridor
+  for(let acol=9;acol<MW-8;acol+=9){
+    vln(acol,12,MH-20,SAND);
+    setT(acol,MH-11,SAND);
+  }
+
+  // Wide center aisle (east-west)
+  fillR(4,20,MW-8,3,SAND);
+
+  // ── FROZEN FOOD WALL (east side) ──────────────────────
+  fillR(MW-9,12,5,MH-20,WATER);   // blue freezer wall
+  fillR(MW-8,12,3,MH-20,SAND);    // walkable in front of freezers
+  // Freezer door gaps every 3
+  for(let fy=13;fy<MH-8;fy+=3)setT(MW-9,fy,SAND);
+
+  // ── PLAYER START (at entrance) ────────────────────────
+  G.player.wx=29*TS+5;G.player.wy=(MH-8)*TS+5;
   G.player.hp=G.player.maxHp;G.player.facing={x:0,y:-1};
 
   // ── NPCs ──────────────────────────────────────────────
-  G.steph=new StephNPC(26,MH-13);
+  G.steph=new StephNPC(26,MH-8);
   G.steph._lines=[
     '"HyVee! Friday Movie Night starts in an hour."',
-    '"You two get to pick ONE treat each. Something good."',
+    '"You two each get to pick ONE treat. Choose wisely."',
     '"Check the snack aisle, the candy section, and the bakery."',
-    '"I will be here. Press Q anytime."',
+    '"Press Q anytime if you need me!"',
   ];
-  G.dad=new DadNPC(34,MH-13);
+  G.dad=new DadNPC(33,MH-8);
   G.dad.lines=[
     '"Friday Movie Night! Best night of the week."',
     '"I already know what I am getting. Popcorn. Every time."',
-    '"You two wander around. The good stuff is scattered all over the store."',
+    '"You two wander around. The good stuff is scattered all over."',
     '"Take your time. We have got a whole movie to get ready for."',
   ];
   G.dad.found=false;
-  G.benny=new BennyDog(20,MH-13);
-  G.scoodles=new ScoodlesNPC(38,MH-13);
+  G.benny=new BennyDog(21,MH-8);
+  G.scoodles=new ScoodlesNPC(38,MH-8);
   G.scoodles._intro='"I am allowed in here. I have a vest. Do not ask about the vest."';
   G.robert=null;
-
   G.npcs=[
-    new NPC(8,10,'Produce Guy','#206010','#f0e060',[
+    new NPC(7,8,'Produce Guy','#206010','#f0e060',[
       '"Welcome to produce! Best fruits in town."',
       '"We just got strawberries in. Your dad already bought two cartons."',
-      '"The bananas are over there. I am not sure why you would want bananas for movie night but I support you."',
+      '"The bananas are on the left. I support all movie night choices."',
     ]),
-    new NPC(MW-10,8,'Baker','#f8d0a0','#f8f0e0',[
-      '"Bakery is open! Cookies, brownies, fresh bread."',
-      '"Your dad asked if we had a cake that said Friday Movie Night on it."',
-      '"We did not. But I respect the vision."',
+    new NPC(MW-13,8,'Baker','#c87840','#f8f0e0',[
+      '"Bakery! Cookies, brownies, fresh bread."',
+      '"Your dad asked for a Friday Movie Night cake. We did not have one."',
+      '"We do now. I made it while you were walking around."',
     ]),
   ];
 
-  // ── LORE ITEMS — scattered around the store ───────────
+  // ── CANDY — all in walkable tiles ─────────────────────
   G.lore=[
-    new LoreItem(8,19, 'Popcorn',       '"In the snack aisle! Classic movie night pick."',                   'candycorn'),
-    new LoreItem(15,25,'Gummy Bears',   '"Center aisle! A timeless choice."',                                'gummy'),
-    new LoreItem(22,19,'Chocolate Bar', '"In the candy section. Dark chocolate. Fancy."',                    'chocolate'),
-    new LoreItem(29,25,'Sour Worms',    '"Sour candy aisle. Thatcher, this one has your name on it."',       'gummy'),
-    new LoreItem(36,19,'Lollipop',      '"Near the checkout. Dad says Eloise always grabs one of these."',   'lollipop'),
-    new LoreItem(43,25,'Jawbreaker',    '"All the way at the back of the snack aisle."',                     'jawbreaker'),
-    new LoreItem(MW-9,20,'Frozen Pizza','"Frozen food section! Dad says absolutely not for movie night."',   'hardcandy'),
-    new LoreItem(MW-9,26,'Ice Cream',   '"Frozen food section! Dad says yes, obviously yes to ice cream."',  'chocolate'),
-    new LoreItem(8,8,  'Strawberries',  '"Fresh from produce! Sweet and perfect."',                          'gumball'),
-    new LoreItem(MW-7,8,'Brownie',      '"From the bakery! Still warm. The baker is very proud."',           'taffy'),
-    new LoreItem(22,25,'Chips',         '"Family size chips. For a family movie. It checks out."',           'hardcandy'),
-    new LoreItem(36,25,'Candy Corn',    '"Seasonal! Dad always buys candy corn no matter what month it is."','candycorn'),
+    // Produce section (walkable grass/flower walkway)
+    new LoreItem(10,7, 'Strawberries',  '"Fresh from produce! Sweet and perfect for movie night."',          'gumball'),
+    // Bakery (walkable cobble floor)
+    new LoreItem(MW-13,11,'Brownie',    '"From the bakery! Still warm. The baker is very proud of this one."','taffy'),
+    // Center aisle (SAND floor)
+    new LoreItem(9,21,  'Popcorn',      '"In the snack aisle! Classic movie night pick."',                   'candycorn'),
+    new LoreItem(18,21, 'Gummy Bears',  '"Center aisle! A timeless choice."',                                'gummy'),
+    new LoreItem(27,21, 'Chocolate Bar','"Candy section. Eloise, this one has your name on it."',            'chocolate'),
+    new LoreItem(36,21, 'Chips',        '"Family size chips. For a family movie. It checks out."',           'hardcandy'),
+    new LoreItem(45,21, 'Lollipop',     '"All the way at the end of the center aisle."',                     'lollipop'),
+    // North-south corridors (SAND)
+    new LoreItem(9,15,  'Candy Corn',   '"Aisle 1! Dad buys candy corn every month regardless of season."',  'candycorn'),
+    new LoreItem(18,17, 'Sour Worms',   '"Aisle 2. Thatcher, this one has your name on it."',                'gummy'),
+    new LoreItem(27,15, 'Jawbreaker',   '"Aisle 3. Hidden behind the cereal boxes."',                        'jawbreaker'),
+    // Frozen section (SAND walkway in front of freezers)
+    new LoreItem(MW-7,16,'Ice Cream',   '"Frozen section! Dad says obviously yes to ice cream."',            'chocolate'),
+    new LoreItem(MW-7,22,'Frozen Pizza','"Dad says absolutely not for movie night. But you found it!"',      'hardcandy'),
   ];
 
   G.enemies=[
-    new Enemy(15,19,1),  // Rogue cart
-    new Enemy(29,19,3),  // Stockroom ghost
-    new Enemy(43,19,0),  // Aisle 6 wanderer
-    new Enemy(22,28,2),  // Frozen food fiend
+    new Enemy(9,14,1),   // aisle 1 wanderer
+    new Enemy(27,14,3),  // aisle 3 roamer
+    new Enemy(45,18,0),  // back aisle guard
+    new Enemy(18,24,2),  // center aisle patrol
   ];
 
-  G.crackers=[new HealthPack(8,23),new HealthPack(45,23),new HealthPack(30,10)];
+  G.crackers=[new HealthPack(9,20),new HealthPack(36,20),new HealthPack(MW-7,20)];
   G.trampoline=null;
 }
 
